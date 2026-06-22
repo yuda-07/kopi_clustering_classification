@@ -1,0 +1,44 @@
+============================================================
+  LAPORAN EVALUASI NAIVE BAYES CLASSIFICATION
+  Klasifikasi Kualitas Biji Kopi
+============================================================
+
+Akurasi     : 0.9786 (97.86%)
+Presisi     : 0.9788
+Recall      : 0.9786
+F1-Score    : 0.9786
+
+Confusion Matrix:
+[[20  0  0  0  0  0  0  0]
+ [ 0 59  0  0  0  1  0  0]
+ [ 0  0 21  0  0  0  0  0]
+ [ 0  0  0 30  0  2  0  0]
+ [ 0  0  0  0 24  0  1  0]
+ [ 0  0  0  2  0 55  0  0]
+ [ 0  0  0  0  0  0 45  0]
+ [ 0  0  0  0  0  0  0 20]]
+
+Classification Report:
+              precision    recall  f1-score   support
+
+           0       1.00      1.00      1.00        20
+           1       1.00      0.98      0.99        60
+           2       1.00      1.00      1.00        21
+           3       0.94      0.94      0.94        32
+           4       1.00      0.96      0.98        25
+           5       0.95      0.96      0.96        57
+           6       0.98      1.00      0.99        45
+           7       1.00      1.00      1.00        20
+
+    accuracy                           0.98       280
+   macro avg       0.98      0.98      0.98       280
+weighted avg       0.98      0.98      0.98       280
+
+
+============================================================
+  Interpretasi Metrik:
+  - Akurasi : Seberapa sering model benar secara keseluruhan
+  - Presisi : Dari prediksi positif, berapa yang benar
+  - Recall  : Dari data positif sebenarnya, berapa yang tertangkap
+  - F1      : Harmonic mean dari Presisi dan Recall
+============================================================

@@ -1,0 +1,27 @@
+============================================================
+  LAPORAN EVALUASI K-MEANS CLUSTERING
+  Pengelompokan Wilayah Distribusi Biji Kopi
+============================================================
+
+Total Data          : 1398
+Jumlah Cluster      : 8
+Silhouette Score    : 0.2363
+Inertia             : 41250.30
+
+Distribusi Data per Cluster:
+----------------------------------------
+  Cluster 0 : 99 data (7.1%)
+  Cluster 1 : 299 data (21.4%)
+  Cluster 2 : 105 data (7.5%)
+  Cluster 3 : 158 data (11.3%)
+  Cluster 4 : 127 data (9.1%)
+  Cluster 5 : 285 data (20.4%)
+  Cluster 6 : 223 data (16.0%)
+  Cluster 7 : 102 data (7.3%)
+
+============================================================
+  Catatan:
+  - Silhouette Score mendekati 1 = clustering sangat baik
+  - Silhouette Score mendekati 0 = cluster overlapping
+  - Silhouette Score negatif = data mungkin salah cluster
+============================================================
