@@ -17,6 +17,7 @@ from sklearn.metrics import (
     f1_score,
     classification_report,
     confusion_matrix,
+    precision_recall_fscore_support,
 )
 
 import sys
@@ -48,13 +49,14 @@ def evaluasi_kmeans(X_fitur, label_cluster, inertia=None):
     sil_score = silhouette_score(X_fitur, label_cluster)
     print(f"  Silhouette Score : {sil_score:.4f}")
 
-    # Distribusi data per cluster
+    # Distribusi data per wilayah
     unique_labels, counts = np.unique(label_cluster, return_counts=True)
-    print(f"  Jumlah cluster   : {len(unique_labels)}")
-    print(f"  Distribusi data  :")
+    print(f"  Jumlah wilayah distribusi : {len(unique_labels)}")
+    print(f"  Distribusi data           :")
     for label, count in zip(unique_labels, counts):
         persentase = (count / len(label_cluster)) * 100
-        print(f"    Cluster {label}: {count} data ({persentase:.1f}%)")
+        nama = config.get_cluster_name(label)
+        print(f"    {nama:<18}: {count} data ({persentase:.1f}%)")
 
     # Inertia (jika tersedia)
     if inertia is not None:
@@ -91,17 +93,18 @@ def simpan_laporan_clustering(hasil_evaluasi, path_output=None):
             f.write("=" * 60 + "\n\n")
 
             f.write(f"Total Data          : {hasil_evaluasi['total_data']}\n")
-            f.write(f"Jumlah Cluster      : {hasil_evaluasi['jumlah_cluster']}\n")
-            f.write(f"Silhouette Score    : {hasil_evaluasi['silhouette_score']:.4f}\n")
+            f.write(f"Jumlah Wilayah Distribusi : {hasil_evaluasi['jumlah_cluster']}\n")
+            f.write(f"Silhouette Score          : {hasil_evaluasi['silhouette_score']:.4f}\n")
 
             if hasil_evaluasi['inertia'] is not None:
-                f.write(f"Inertia             : {hasil_evaluasi['inertia']:.2f}\n")
+                f.write(f"Inertia                   : {hasil_evaluasi['inertia']:.2f}\n")
 
-            f.write(f"\nDistribusi Data per Cluster:\n")
+            f.write(f"\nDistribusi Data per Wilayah:\n")
             f.write("-" * 40 + "\n")
             for cluster, jumlah in hasil_evaluasi['distribusi'].items():
                 pct = (jumlah / hasil_evaluasi['total_data']) * 100
-                f.write(f"  Cluster {cluster} : {jumlah} data ({pct:.1f}%)\n")
+                nama = config.get_cluster_name(cluster)
+                f.write(f"  {nama:<18} : {jumlah} data ({pct:.1f}%)\n")
 
             f.write("\n" + "=" * 60 + "\n")
             f.write("  Catatan:\n")
@@ -161,6 +164,21 @@ def evaluasi_naive_bayes(y_test, y_pred, label_names=None):
         report_str = classification_report(y_test, y_pred, labels=labels_present, zero_division=0)
     print(report_str)
 
+    # Hitung metrik per kelas untuk visualisasi chart
+    p, r, f1, sup = precision_recall_fscore_support(
+        y_test, y_pred, average=None, zero_division=0
+    )
+
+    per_class = {}
+    for i, lbl in enumerate(labels_present):
+        key = label_names[i] if (label_names and len(label_names) == len(labels_present)) else str(lbl)
+        per_class[key] = {
+            'precision': float(p[i]),
+            'recall': float(r[i]),
+            'f1': float(f1[i]),
+            'support': int(sup[i])
+        }
+
     hasil = {
         'akurasi': akurasi,
         'presisi': presisi,
@@ -168,6 +186,8 @@ def evaluasi_naive_bayes(y_test, y_pred, label_names=None):
         'f1_score': f1_val,
         'confusion_matrix': cm,
         'classification_report': report_str,
+        'per_class': per_class,
+        'label_names': label_names if label_names else [str(l) for l in labels_present],
     }
 
     print("=" * 50)
@@ -189,7 +209,7 @@ def simpan_laporan_klasifikasi(hasil_evaluasi, path_output=None):
         with open(path_output, 'w', encoding='utf-8') as f:
             f.write("=" * 60 + "\n")
             f.write("  LAPORAN EVALUASI NAIVE BAYES CLASSIFICATION\n")
-            f.write("  Klasifikasi Kualitas Biji Kopi\n")
+            f.write("  Klasifikasi Wilayah Distribusi Biji Kopi\n")
             f.write("=" * 60 + "\n\n")
 
             f.write(f"Akurasi     : {hasil_evaluasi['akurasi']:.4f} ({hasil_evaluasi['akurasi']*100:.2f}%)\n")

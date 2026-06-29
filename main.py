@@ -182,8 +182,8 @@ def tahap_kmeans_clustering(df_fitur):
 # TAHAP 5: Naive Bayes Classification
 # ============================================================
 def tahap_naive_bayes(df_labeled, label_encoder_classes=None):
-    """Melakukan klasifikasi kualitas menggunakan Naive Bayes."""
-    cetak_banner("TAHAP 5: NAIVE BAYES CLASSIFICATION")
+    """Melakukan klasifikasi wilayah distribusi menggunakan Naive Bayes."""
+    cetak_banner("TAHAP 5: KLASIFIKASI WILAYAH DISTRIBUSI (NAIVE BAYES)")
 
     # 5a. Siapkan data training
     print("[SUB-TAHAP 5A] Menyiapkan data training...")
@@ -202,10 +202,11 @@ def tahap_naive_bayes(df_labeled, label_encoder_classes=None):
 
     # 5c. Evaluasi model
     print("\n[SUB-TAHAP 5C] Evaluasi Naive Bayes Classification...")
+    label_names = config.get_cluster_names_list(label_encoder.classes_)
     hasil_eval_nb = evaluation.evaluasi_naive_bayes(
         hasil_training['y_test'],
         hasil_training['y_pred'],
-        label_names=[str(c) for c in label_encoder.classes_]
+        label_names=label_names
     )
     evaluation.simpan_laporan_klasifikasi(hasil_eval_nb)
 
@@ -214,7 +215,15 @@ def tahap_naive_bayes(df_labeled, label_encoder_classes=None):
     visualization.plot_confusion_matrix(
         hasil_training['y_test'],
         hasil_training['y_pred'],
-        label_names=[f"Cluster {c}" for c in label_encoder.classes_]
+        label_names=label_names
+    )
+
+    # 5e. Visualisasi metrik per kelas
+    print("\n[SUB-TAHAP 5E] Visualisasi Performa per Kelas...")
+    visualization.plot_per_class_metrics(
+        hasil_training['y_test'],
+        hasil_training['y_pred'],
+        label_names=label_names
     )
 
     return hasil_training, hasil_eval_nb, label_encoder
@@ -232,11 +241,13 @@ def tahap_ringkasan(hasil_eval_km, hasil_eval_nb):
 
     # Ringkasan K-Means
     print("\n  [K-Means Clustering]")
-    print(f"  Jumlah Cluster      : {hasil_eval_km['jumlah_cluster']}")
-    print(f"  Silhouette Score    : {hasil_eval_km['silhouette_score']:.4f}")
-    print(f"  Inertia             : {hasil_eval_km['inertia']}")
+    print(f"  Jumlah Wilayah Distribusi : {hasil_eval_km['jumlah_cluster']}")
+    print(f"  Silhouette Score          : {hasil_eval_km['silhouette_score']:.4f}")
+    print(f"  Inertia                   : {hasil_eval_km['inertia']}")
+    print("  Distribusi per Wilayah:")
     for cluster, jumlah in hasil_eval_km['distribusi'].items():
-        print(f"    Cluster {cluster}      : {jumlah} data")
+        nama = config.get_cluster_name(cluster)
+        print(f"    {nama:<18} : {jumlah} data")
 
     # Ringkasan Naive Bayes
     print("\n  [Naive Bayes Classification]")
@@ -263,10 +274,11 @@ def tahap_ringkasan(hasil_eval_km, hasil_eval_nb):
         ("Correlation Heatmap", config.CORRELATION_HEATMAP_PATH),
         ("Silhouette Analysis", config.SILHOUETTE_ANALYSIS_PATH),
         ("RGB Distribution", config.RGB_DISTRIBUTION_PATH),
-        ("Cluster Size Chart", config.CLUSTER_SIZE_PATH),
-        ("Radar Chart", config.RADAR_CHART_PATH),
+        ("Wilayah Size Chart", config.CLUSTER_SIZE_PATH),
+        ("Radar Chart (Wilayah)", config.RADAR_CHART_PATH),
         ("Pair Plot", config.PAIR_PLOT_PATH),
         ("Metric Comparison", config.METRIC_COMPARISON_PATH),
+        ("Per-Wilayah Metrics", config.CLASSIFICATION_PER_CLASS_PATH),
         ("Laporan Clustering", config.CLUSTERING_REPORT_PATH),
         ("Laporan Klasifikasi", config.CLASSIFICATION_REPORT_PATH),
     ]
@@ -311,8 +323,8 @@ def main():
     # TAHAP 5: Naive Bayes Classification
     hasil_training_nb, hasil_eval_nb, label_encoder = tahap_naive_bayes(df_labeled)
 
-    # TAHAP 5E: Visualisasi Statistik Lengkap (BARU)
-    cetak_banner("TAHAP 5E: VISUALISASI STATISTIK LENGKAP")
+    # TAHAP 5E: Visualisasi Statistik Lengkap
+    cetak_banner("TAHAP 5E: VISUALISASI STATISTIK WILAYAH DISTRIBUSI")
     kolom_fitur_nb = [c for c in df_scaled.columns if c != 'nama_file']
     X_fitur_final = df_scaled[kolom_fitur_nb].values
 

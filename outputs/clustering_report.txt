@@ -4,20 +4,20 @@
 ============================================================
 
 Total Data          : 1398
-Jumlah Cluster      : 8
-Silhouette Score    : 0.2363
-Inertia             : 41250.30
+Jumlah Wilayah Distribusi : 8
+Silhouette Score          : 0.2363
+Inertia                   : 41250.30
 
-Distribusi Data per Cluster:
+Distribusi Data per Wilayah:
 ----------------------------------------
-  Cluster 0 : 99 data (7.1%)
-  Cluster 1 : 299 data (21.4%)
-  Cluster 2 : 105 data (7.5%)
-  Cluster 3 : 158 data (11.3%)
-  Cluster 4 : 127 data (9.1%)
-  Cluster 5 : 285 data (20.4%)
-  Cluster 6 : 223 data (16.0%)
-  Cluster 7 : 102 data (7.3%)
+  Gelap Halus        : 99 data (7.1%)
+  Cerah Pucat        : 299 data (21.4%)
+  Gelap Kasar        : 105 data (7.5%)
+  Sedang Kasar       : 158 data (11.3%)
+  Cerah Halus        : 127 data (9.1%)
+  Standar            : 285 data (20.4%)
+  Sangat Gelap       : 223 data (16.0%)
+  Cerah Seragam      : 102 data (7.3%)
 
 ============================================================
   Catatan:

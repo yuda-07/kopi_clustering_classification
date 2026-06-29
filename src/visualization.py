@@ -15,10 +15,11 @@ Menyediakan semua fungsi plotting untuk proyek:
 - Correlation Heatmap (korelasi antar fitur)
 - Silhouette Analysis Plot (analisis per-sampel)
 - RGB Channel Distribution per Jenis Kopi
-- Cluster Size Bar Chart (ukuran cluster)
+- Wilayah Size Bar Chart (ukuran wilayah distribusi)
 - Radar Chart (profil fitur per cluster)
 - Pair Plot (scatter matrix fitur teratas)
 - Metric Comparison (perbandingan metrik evaluasi)
+- Per-Class Metrics (performa Precision/Recall/F1 per kelas klasifikasi)
 
 Semua plot: TAMPILKAN POPUP + SIMPAN PNG
 """
@@ -127,9 +128,9 @@ def plot_confusion_matrix(y_test, y_pred, label_names=None, path_output=None):
     fig, ax = plt.subplots(figsize=(9, 7))
     sns.heatmap(cm, annot=True, fmt='d', cmap='Blues',
                 xticklabels=label_names, yticklabels=label_names, ax=ax)
-    ax.set_title('Confusion Matrix - Naive Bayes', fontsize=14, fontweight='bold')
-    ax.set_xlabel('Prediksi', fontsize=12)
-    ax.set_ylabel('Sebenarnya', fontsize=12)
+    ax.set_title('Confusion Matrix - Klasifikasi Wilayah Distribusi\n(Naive Bayes)', fontsize=14, fontweight='bold')
+    ax.set_xlabel('Prediksi Wilayah', fontsize=12)
+    ax.set_ylabel('Wilayah Sebenarnya', fontsize=12)
 
     _simpan_dan_tampilkan(fig, path_output, "Confusion Matrix")
 
@@ -168,7 +169,7 @@ def plot_distribusi_cluster(df_scaled, label_cluster, fitur_pilih=None, path_out
     for j in range(i + 1, n_rows * n_cols):
         fig.delaxes(axes[j // n_cols][j % n_cols] if n_rows > 1 else axes[j])
 
-    fig.suptitle('Distribusi Fitur per Cluster', fontsize=14, fontweight='bold', y=1.02)
+    fig.suptitle('Distribusi Fitur per Wilayah Distribusi', fontsize=14, fontweight='bold', y=1.02)
 
     _simpan_dan_tampilkan(fig, path_output, "Distribusi Fitur per Cluster")
 
@@ -233,8 +234,9 @@ def plot_pca_scatter(X_fitur, label_cluster, path_output=None):
 
     for label, color in zip(unique_labels, colors):
         mask = label_cluster == label
+        cluster_name = config.get_cluster_name(label)
         ax.scatter(X_pca[mask, 0], X_pca[mask, 1],
-                   c=[color], label=f'Cluster {label}',
+                   c=[color], label=cluster_name,
                    alpha=0.6, s=30, edgecolors='w', linewidth=0.3)
 
     # Tandai centroid di ruang PCA
@@ -243,12 +245,12 @@ def plot_pca_scatter(X_fitur, label_cluster, path_output=None):
         cx, cy = X_pca[mask, 0].mean(), X_pca[mask, 1].mean()
         ax.scatter(cx, cy, c=[color], marker='X', s=200, edgecolors='black', linewidth=2)
 
-    ax.set_title(f'PCA Scatter Plot 2D - Visualisasi Cluster\n'
+    ax.set_title(f'PCA Scatter Plot 2D - Visualisasi 8 Wilayah Distribusi\n'
                  f'(PC1={var1:.1f}% variance, PC2={var2:.1f}% variance)',
                  fontsize=13, fontweight='bold')
     ax.set_xlabel(f'Principal Component 1 ({var1:.1f}%)', fontsize=12)
     ax.set_ylabel(f'Principal Component 2 ({var2:.1f}%)', fontsize=12)
-    ax.legend(loc='best', fontsize=9)
+    ax.legend(loc='best', fontsize=9, title="Wilayah")
     ax.grid(True, alpha=0.2)
 
     _simpan_dan_tampilkan(fig, path_output, "PCA Scatter 2D")
@@ -396,15 +398,19 @@ def plot_cluster_size(label_cluster, path_output=None):
     total = counts.sum()
     percentages = (counts / total) * 100
 
+    # Gunakan nama deskriptif
+    cluster_labels = [config.get_cluster_name(l) for l in unique_labels]
+
     fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(14, 6))
 
     # Bar chart
     colors = plt.cm.Set3(np.linspace(0, 1, len(unique_labels)))
-    bars = ax1.bar([f'Cluster {l}' for l in unique_labels], counts,
+    bars = ax1.bar(cluster_labels, counts,
                    color=colors, edgecolor='black', linewidth=0.8)
-    ax1.set_title('Jumlah Data per Cluster', fontsize=13, fontweight='bold')
-    ax1.set_xlabel('Cluster')
+    ax1.set_title('Jumlah Data per Wilayah Distribusi', fontsize=13, fontweight='bold')
+    ax1.set_xlabel('Wilayah Distribusi')
     ax1.set_ylabel('Jumlah Data')
+    plt.setp(ax1.get_xticklabels(), rotation=30, ha='right')
 
     # Tambahkan angka di atas bar
     for bar, count in zip(bars, counts):
@@ -412,13 +418,13 @@ def plot_cluster_size(label_cluster, path_output=None):
                  str(count), ha='center', va='bottom', fontweight='bold')
 
     # Pie chart
-    ax2.pie(counts, labels=[f'Cluster {l}\n({p:.1f}%)' for l, p in zip(unique_labels, percentages)],
+    ax2.pie(counts, labels=[f'{name}\n({p:.1f}%)' for name, p in zip(cluster_labels, percentages)],
             colors=colors, autopct='', startangle=90, textprops={'fontsize': 9})
-    ax2.set_title('Proporsi Cluster', fontsize=13, fontweight='bold')
+    ax2.set_title('Proporsi Wilayah', fontsize=13, fontweight='bold')
 
-    fig.suptitle('Distribusi Ukuran Cluster', fontsize=14, fontweight='bold', y=1.02)
+    fig.suptitle('Distribusi Ukuran Wilayah Distribusi', fontsize=14, fontweight='bold', y=1.02)
 
-    _simpan_dan_tampilkan(fig, path_output, "Cluster Size Chart")
+    _simpan_dan_tampilkan(fig, path_output, "Wilayah Size Chart")
 
 
 # ============================================================
@@ -467,7 +473,8 @@ def plot_radar_chart(df_scaled, label_cluster, max_fitur=10, path_output=None):
     for idx, (label, color) in enumerate(zip(unique_labels, colors)):
         values = mean_norm[idx].tolist()
         values += values[:1]
-        ax.plot(angles, values, linewidth=2, label=f'Cluster {label}', color=color)
+        cluster_name = config.get_cluster_name(label)
+        ax.plot(angles, values, linewidth=2, label=cluster_name, color=color)
         ax.fill(angles, values, alpha=0.15, color=color)
 
     ax.set_xticks(angles[:-1])
@@ -475,7 +482,7 @@ def plot_radar_chart(df_scaled, label_cluster, max_fitur=10, path_output=None):
     short_names = [n.replace('hist_', 'h_').replace('mean_', 'm_').replace('std_', 's_')
                    for n in kolom_fitur]
     ax.set_xticklabels(short_names, fontsize=8)
-    ax.set_title(f'Radar Chart - Profil Fitur per Cluster\n({len(kolom_fitur)} fitur teratas)',
+    ax.set_title(f'Radar Chart - Profil Fitur per Wilayah Distribusi\n({len(kolom_fitur)} fitur teratas)',
                  fontsize=13, fontweight='bold', pad=20)
     ax.legend(loc='upper right', bbox_to_anchor=(1.3, 1.1), fontsize=10)
 
@@ -501,7 +508,7 @@ def plot_pair_plot(df_scaled, label_cluster, max_fitur=5, path_output=None):
         kolom_fitur = varians.head(max_fitur).index.tolist()
 
     df_plot = df_scaled[kolom_fitur].copy()
-    df_plot['cluster'] = [f'C{l}' for l in label_cluster]
+    df_plot['cluster'] = [config.get_cluster_name(l) for l in label_cluster]
 
     # Singkat nama kolom
     rename_map = {c: c.replace('hist_', 'h_').replace('mean_', 'm_').replace('std_', 's_')
@@ -511,7 +518,7 @@ def plot_pair_plot(df_scaled, label_cluster, max_fitur=5, path_output=None):
     fig = sns.pairplot(df_plot, hue='cluster', palette='Set2',
                        diag_kind='kde', plot_kws={'alpha': 0.5, 's': 15},
                        diag_kws={'alpha': 0.7})
-    fig.figure.suptitle('Pair Plot - Scatter Matrix Fitur Teratas',
+    fig.figure.suptitle('Pair Plot - Scatter Matrix Fitur per Wilayah Distribusi',
                         fontsize=14, fontweight='bold', y=1.02)
 
     _simpan_dan_tampilkan(fig.figure, path_output, "Pair Plot")
@@ -547,11 +554,103 @@ def plot_metric_comparison(hasil_eval_nb, path_output=None):
                 ha='center', va='bottom', fontweight='bold', fontsize=11)
 
     ax.set_ylim(0, 1.15)
-    ax.set_title('Perbandingan Metrik Evaluasi Naive Bayes', fontsize=14, fontweight='bold')
+    ax.set_title('Perbandingan Metrik Evaluasi Naive Bayes\n(Klasifikasi Wilayah Distribusi)', fontsize=14, fontweight='bold')
     ax.set_ylabel('Nilai Metrik', fontsize=12)
     ax.grid(True, alpha=0.3, axis='y')
 
     _simpan_dan_tampilkan(fig, path_output, "Metric Comparison")
+
+
+# ============================================================
+# 14. PER-CLASS METRICS BAR CHART (BARU - Klasifikasi)
+# ============================================================
+def plot_per_class_metrics(y_test=None, y_pred=None, hasil_eval_nb=None,
+                           label_names=None, path_output=None):
+    """
+    Memplot grouped bar chart yang menampilkan Precision, Recall, dan F1-Score
+    untuk setiap kelas hasil klasifikasi Naive Bayes.
+
+    Bisa dipanggil dengan:
+    - hasil_eval_nb (hasil dari evaluasi_naive_bayes)
+    - atau langsung y_test + y_pred + label_names
+    """
+    import pandas as pd
+    from sklearn.metrics import precision_recall_fscore_support
+
+    if path_output is None:
+        path_output = config.CLASSIFICATION_PER_CLASS_PATH
+
+    # Ambil data per-class
+    per_class_data = None
+    final_labels = None
+
+    if hasil_eval_nb is not None and 'per_class' in hasil_eval_nb:
+        per_class_data = hasil_eval_nb['per_class']
+        final_labels = hasil_eval_nb.get('label_names', list(per_class_data.keys()))
+    elif y_test is not None and y_pred is not None:
+        # Hitung ulang jika tidak diberikan melalui hasil_eval_nb
+        labels_present = sorted(set(y_test.tolist() + y_pred.tolist()))
+        p, r, f1, sup = precision_recall_fscore_support(
+            y_test, y_pred, average=None, zero_division=0
+        )
+        per_class_data = {}
+        for i, lbl in enumerate(labels_present):
+            key = label_names[i] if (label_names and len(label_names) == len(labels_present)) else str(lbl)
+            per_class_data[key] = {
+                'precision': float(p[i]),
+                'recall': float(r[i]),
+                'f1': float(f1[i]),
+                'support': int(sup[i])
+            }
+        final_labels = list(per_class_data.keys())
+    else:
+        print("[ERROR] plot_per_class_metrics: data tidak cukup (butuh hasil_eval_nb atau y_test+y_pred)")
+        return
+
+    if not per_class_data:
+        print("[ERROR] Tidak ada data per-class untuk diplot.")
+        return
+
+    # Siapkan DataFrame untuk seaborn
+    records = []
+    for lbl in final_labels:
+        if lbl in per_class_data:
+            records.append({
+                'Kelas': str(lbl),
+                'Metrik': 'Precision',
+                'Nilai': per_class_data[lbl]['precision']
+            })
+            records.append({
+                'Kelas': str(lbl),
+                'Metrik': 'Recall',
+                'Nilai': per_class_data[lbl]['recall']
+            })
+            records.append({
+                'Kelas': str(lbl),
+                'Metrik': 'F1-Score',
+                'Nilai': per_class_data[lbl]['f1']
+            })
+
+    df_plot = pd.DataFrame(records)
+
+    # Plot
+    fig, ax = plt.subplots(figsize=(12, 7))
+    sns.barplot(data=df_plot, x='Kelas', y='Nilai', hue='Metrik',
+                palette={'Precision': '#3498db', 'Recall': '#2ecc71', 'F1-Score': '#e74c3c'},
+                ax=ax, edgecolor='black', linewidth=0.6)
+
+    ax.set_ylim(0, 1.15)
+    ax.set_title('Performa Klasifikasi per Wilayah Distribusi (Naive Bayes)', fontsize=14, fontweight='bold')
+    ax.set_xlabel('Wilayah Distribusi', fontsize=12)
+    ax.set_ylabel('Nilai Metrik', fontsize=12)
+    ax.legend(title='Metrik', loc='upper right')
+    ax.grid(True, alpha=0.3, axis='y')
+
+    # Tambahkan nilai kecil di atas bar jika memungkinkan
+    for container in ax.containers:
+        ax.bar_label(container, fmt='%.2f', padding=3, fontsize=8)
+
+    _simpan_dan_tampilkan(fig, path_output, "Per-Class Metrics (Classification)")
 
 
 # ============================================================
@@ -575,7 +674,7 @@ def jalankan_semua_visualisasi_statistik(
         list_label_asli (list): Label asli per gambar (arabika/liberika/robusta).
     """
     print("\n" + "=" * 60)
-    print("  VISUALISASI STATISTIK LENGKAP")
+    print("  VISUALISASI STATISTIK LENGKAP (Wilayah Distribusi)")
     print("=" * 60)
 
     # 1. PCA Scatter 2D
@@ -597,8 +696,8 @@ def jalankan_semua_visualisasi_statistik(
     else:
         print("[VIS 4/8] RGB Distribution - dilewati (data tidak tersedia)")
 
-    # 5. Cluster Size
-    print("[VIS 5/8] Cluster Size Bar Chart...")
+    # 5. Wilayah Size
+    print("[VIS 5/8] Ukuran Wilayah Distribusi...")
     plot_cluster_size(label_cluster)
 
     # 6. Radar Chart
@@ -612,6 +711,10 @@ def jalankan_semua_visualisasi_statistik(
     # 8. Metric Comparison
     print("[VIS 8/8] Metric Comparison (Naive Bayes)...")
     plot_metric_comparison(hasil_eval_nb)
+
+    # 9. Per-Class Metrics (BARU)
+    print("[VIS 9/9] Per-Class Classification Metrics...")
+    plot_per_class_metrics(hasil_eval_nb=hasil_eval_nb)
 
     print("\n[OK] Semua visualisasi statistik selesai!")
 

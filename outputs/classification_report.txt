@@ -1,6 +1,6 @@
 ============================================================
   LAPORAN EVALUASI NAIVE BAYES CLASSIFICATION
-  Klasifikasi Kualitas Biji Kopi
+  Klasifikasi Wilayah Distribusi Biji Kopi
 ============================================================
 
 Akurasi     : 0.9786 (97.86%)
@@ -19,20 +19,20 @@ Confusion Matrix:
  [ 0  0  0  0  0  0  0 20]]
 
 Classification Report:
-              precision    recall  f1-score   support
+               precision    recall  f1-score   support
 
-           0       1.00      1.00      1.00        20
-           1       1.00      0.98      0.99        60
-           2       1.00      1.00      1.00        21
-           3       0.94      0.94      0.94        32
-           4       1.00      0.96      0.98        25
-           5       0.95      0.96      0.96        57
-           6       0.98      1.00      0.99        45
-           7       1.00      1.00      1.00        20
+  Gelap Halus       1.00      1.00      1.00        20
+  Cerah Pucat       1.00      0.98      0.99        60
+  Gelap Kasar       1.00      1.00      1.00        21
+ Sedang Kasar       0.94      0.94      0.94        32
+  Cerah Halus       1.00      0.96      0.98        25
+      Standar       0.95      0.96      0.96        57
+ Sangat Gelap       0.98      1.00      0.99        45
+Cerah Seragam       1.00      1.00      1.00        20
 
-    accuracy                           0.98       280
-   macro avg       0.98      0.98      0.98       280
-weighted avg       0.98      0.98      0.98       280
+     accuracy                           0.98       280
+    macro avg       0.98      0.98      0.98       280
+ weighted avg       0.98      0.98      0.98       280
 
 
 ============================================================

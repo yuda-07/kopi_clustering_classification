@@ -232,11 +232,12 @@ def training_kmeans(df_scaled, n_clusters=None):
     # Tampilkan distribusi cluster
     unique, counts = np.unique(label_cluster, return_counts=True)
     print(f"[OK] Training K-Means selesai.")
-    print(f"     Inertia        : {inertia:.2f}")
-    print(f"     Silhouette Score: {sil_score:.4f}")
-    print(f"     Distribusi cluster:")
+    print(f"     Inertia           : {inertia:.2f}")
+    print(f"     Silhouette Score  : {sil_score:.4f}")
+    print(f"     Distribusi wilayah:")
     for u, c in zip(unique, counts):
-        print(f"       Cluster {u}: {c} data")
+        nama = config.get_cluster_name(u)
+        print(f"       {nama:<16}: {c} data")
 
     return model, label_cluster, inertia, sil_score
 

@@ -60,6 +60,7 @@ CLUSTER_SIZE_PATH = os.path.join(PLOTS_DIR, "cluster_size_bar.png")
 RADAR_CHART_PATH = os.path.join(PLOTS_DIR, "radar_chart_cluster.png")
 PAIR_PLOT_PATH = os.path.join(PLOTS_DIR, "pair_plot_top_features.png")
 METRIC_COMPARISON_PATH = os.path.join(PLOTS_DIR, "metric_comparison.png")
+CLASSIFICATION_PER_CLASS_PATH = os.path.join(PLOTS_DIR, "classification_per_class_metrics.png")
 
 # Konfigurasi tampilan visualisasi
 SHOW_PLOTS = True  # True = tampilkan popup, False = hanya simpan PNG
@@ -113,6 +114,31 @@ RANDOM_STATE = 42
 
 # Daftar jenis biji kopi (label kelas berdasarkan folder dataset)
 GRADE_LABELS = ["arabika", "liberika", "robusta"]
+
+# ============================================================
+# MAPPING NAMA CLUSTER (pengganti "Cluster 0", "Cluster 1", ...)
+# Nama-nama ini lebih deskriptif berdasarkan karakteristik visual
+# ============================================================
+CLUSTER_NAME_MAP = {
+    0: "Gelap Halus",
+    1: "Cerah Pucat",
+    2: "Gelap Kasar",
+    3: "Sedang Kasar",
+    4: "Cerah Halus",
+    5: "Standar",
+    6: "Sangat Gelap",
+    7: "Cerah Seragam"
+}
+
+
+def get_cluster_name(cluster_id):
+    """Mengembalikan nama deskriptif untuk cluster ID."""
+    return CLUSTER_NAME_MAP.get(cluster_id, f"Cluster {cluster_id}")
+
+
+def get_cluster_names_list(cluster_ids):
+    """Mengembalikan list nama deskriptif sesuai urutan cluster_ids."""
+    return [get_cluster_name(cid) for cid in cluster_ids]
 
 # Format file gambar yang didukung
 IMAGE_EXTENSIONS = [".jpg", ".jpeg", ".png"]
