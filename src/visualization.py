@@ -30,6 +30,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import matplotlib
 import seaborn as sns
+import cv2
 from sklearn.metrics import confusion_matrix, silhouette_samples
 from sklearn.decomposition import PCA
 
@@ -39,6 +40,120 @@ import config
 
 # Gunakan backend yang mendukung popup (TkAgg default)
 matplotlib.use('TkAgg')
+
+
+# ============================================================
+# HELPER: Ambil Warna Cluster dari Gambar Asli
+# ============================================================
+def ambil_warna_cluster_dari_gambar(labeled_csv_path=None, images_dir=None, n_sampel=30):
+    """
+    Menghitung warna rata-rata (mean RGB) dari gambar asli biji kopi
+    untuk setiap cluster, lalu mengembalikannya sebagai dict warna matplotlib.
+
+    Cara kerja:
+      1. Baca labeled_dataset.csv → tahu gambar mana masuk cluster berapa
+      2. Per cluster, ambil n_sampel gambar acak
+      3. Baca pixel gambar asli (belum di-scale), hitung mean RGB
+      4. Kembalikan sebagai tuple (R/255, G/255, B/255) per cluster
+
+    Parameters
+    ----------
+    labeled_csv_path : str, opsional
+        Path ke labeled_dataset.csv. Default: config.LABELED_DATASET_CSV
+    images_dir : str, opsional
+        Path ke folder coffee_images. Default: config.COFFEE_IMAGES_DIR
+    n_sampel : int
+        Jumlah gambar yang diambil sampel per cluster (default 30).
+
+    Returns
+    -------
+    dict
+        {cluster_id (int): (R, G, B) ternormalisasi ke [0, 1]}
+    """
+    if labeled_csv_path is None:
+        labeled_csv_path = config.LABELED_DATASET_CSV
+    if images_dir is None:
+        images_dir = config.COFFEE_IMAGES_DIR
+
+    # Baca CSV
+    df = pd.read_csv(labeled_csv_path)
+
+    # Pastikan kolom yang dibutuhkan ada
+    if 'nama_file' not in df.columns or 'cluster_label' not in df.columns:
+        print("[WARN] Kolom 'nama_file' atau 'cluster_label' tidak ditemukan. "
+              "Fallback ke colormap Set3.")
+        return None
+
+    # Tentukan subfolder berdasarkan prefix nama file
+    def _cari_path_gambar(nama_file):
+        """Cari path lengkap gambar berdasarkan prefix nama file."""
+        for subfolder in ['arabika', 'robusta', 'liberika']:
+            path = os.path.join(images_dir, subfolder, nama_file)
+            if os.path.exists(path):
+                return path
+        return None
+
+    warna_per_cluster = {}
+    cluster_ids = sorted(df['cluster_label'].unique())
+
+    for cluster_id in cluster_ids:
+        # Ambil semua baris yang masuk cluster ini
+        baris_cluster = df[df['cluster_label'] == cluster_id]
+
+        # Sampel acak (agar tidak terlalu lama)
+        if len(baris_cluster) > n_sampel:
+            baris_cluster = baris_cluster.sample(n=n_sampel, random_state=42)
+
+        semua_pixel_rgb = []  # list untuk mengumpulkan mean RGB per gambar
+
+        for nama_file in baris_cluster['nama_file'].values:
+            path_gambar = _cari_path_gambar(nama_file)
+            if path_gambar is None:
+                continue
+
+            # Baca gambar (OpenCV: BGR) → konversi ke RGB
+            img_bgr = cv2.imread(path_gambar)
+            if img_bgr is None:
+                continue
+            img_rgb = cv2.cvtColor(img_bgr, cv2.COLOR_BGR2RGB)
+
+            # -------------------------------------------------------
+            # Filter piksel latar belakang (putih/terang)
+            # Hanya pertahankan piksel yang brightness-nya < threshold
+            # sehingga yang dihitung hanya piksel biji kopi asli.
+            # Brightness = rata-rata R+G+B per piksel
+            # -------------------------------------------------------
+            pixels = img_rgb.reshape(-1, 3).astype(np.float32)
+            brightness = pixels.mean(axis=1)          # brightness per piksel
+            mask_kopi = brightness < 200              # True = piksel gelap (biji kopi)
+
+            if mask_kopi.sum() < 10:
+                # Hampir semua piksel terang (gambar terlalu terang/blank)
+                # Turunkan threshold supaya ada data
+                mask_kopi = brightness < 230
+
+            pixels_kopi = pixels[mask_kopi]
+
+            if len(pixels_kopi) == 0:
+                continue
+
+            mean_rgb = pixels_kopi.mean(axis=0)      # shape: (3,)
+            semua_pixel_rgb.append(mean_rgb)
+
+        if len(semua_pixel_rgb) == 0:
+            print(f"[WARN] Cluster {cluster_id}: tidak ada gambar ditemukan. "
+                  "Warna akan di-fallback ke Set3.")
+            warna_per_cluster[cluster_id] = None
+        else:
+            # Rata-rata dari semua gambar di cluster ini → normalisasi ke [0, 1]
+            mean_cluster = np.array(semua_pixel_rgb).mean(axis=0)
+            warna_per_cluster[cluster_id] = tuple(mean_cluster / 255.0)
+
+        mean_display = np.array(semua_pixel_rgb).mean(axis=0).astype(int) \
+            if semua_pixel_rgb else 'N/A'
+        print(f"[OK] Cluster {cluster_id}: mean RGB (tanpa bg) = {mean_display}")
+
+    return warna_per_cluster
 
 
 # ============================================================
@@ -387,43 +502,275 @@ def plot_rgb_distribution(list_hasil_prep, list_label_asli, path_output=None):
 # ============================================================
 # 10. CLUSTER SIZE BAR CHART [BARU]
 # ============================================================
+def _ambil_gambar_representatif(cluster_id, df_labeled, images_dir, ukuran=(70, 70)):
+    """
+    Mengambil satu gambar biji kopi asli yang paling representatif
+    (paling mendekati mean RGB cluster) untuk ditampilkan sebagai thumbnail.
+
+    Parameters
+    ----------
+    cluster_id : int
+        ID cluster yang dicari gambarnya.
+    df_labeled : pd.DataFrame
+        DataFrame labeled_dataset.csv dengan kolom 'nama_file' & 'cluster_label'.
+    images_dir : str
+        Path ke folder coffee_images (berisi subfolder arabika/robusta/liberika).
+    ukuran : tuple
+        Ukuran resize thumbnail (lebar, tinggi) dalam piksel.
+
+    Returns
+    -------
+    np.ndarray atau None
+        Array gambar RGB shape (H, W, 3), atau None jika tidak ditemukan.
+    """
+    def _cari_path(nama_file):
+        for subfolder in ['arabika', 'robusta', 'liberika']:
+            path = os.path.join(images_dir, subfolder, nama_file)
+            if os.path.exists(path):
+                return path
+        return None
+
+    baris = df_labeled[df_labeled['cluster_label'] == cluster_id]
+    if baris.empty:
+        return None
+
+    # Ambil sampel kandidat gambar (max 30)
+    kandidat = baris.sample(n=min(30, len(baris)), random_state=42)
+
+    imgs_rgb = []
+    for nama_file in kandidat['nama_file'].values:
+        path = _cari_path(nama_file)
+        if path is None:
+            continue
+        img_bgr = cv2.imread(path)
+        if img_bgr is None:
+            continue
+        imgs_rgb.append((nama_file, cv2.cvtColor(img_bgr, cv2.COLOR_BGR2RGB)))
+
+    if not imgs_rgb:
+        return None
+
+    # Hitung mean RGB biji kopi (tanpa background putih) per gambar kandidat
+    mean_per_gambar = []
+    for _, img_rgb in imgs_rgb:
+        pixels = img_rgb.reshape(-1, 3).astype(np.float32)
+        brightness = pixels.mean(axis=1)
+        mask = brightness < 200
+        if mask.sum() < 10:
+            mask = brightness < 230
+        mean_per_gambar.append(
+            pixels[mask].mean(axis=0) if mask.sum() > 0 else pixels.mean(axis=0)
+        )
+
+    # Pilih gambar yang mean-nya paling dekat dengan mean keseluruhan cluster
+    mean_cluster = np.array(mean_per_gambar).mean(axis=0)
+    jarak = [np.linalg.norm(np.array(m) - mean_cluster) for m in mean_per_gambar]
+    idx_terbaik = int(np.argmin(jarak))
+
+    _, img_terbaik = imgs_rgb[idx_terbaik]
+
+    # --- Cropping Biji Kopi untuk Menghilangkan Background Putih Berlebih ---
+    h_img, w_img, _ = img_terbaik.shape
+    # Karena seluruh gambar biji kopi di dataset ini dipotret dengan setup kamera standar 
+    # (resolusi seragam dan posisi biji kopi selalu tepat di tengah), cara terbaik dan paling
+    # konsisten agar ukuran biji kopi "sama rata" (seragam) di semua cluster adalah dengan
+    # memotong area tengah dengan persentase/skala zoom yang persis sama untuk seluruh gambar.
+    # Kita potong area tengah sebesar 22% (11% ke atas-bawah-kiri-kanan dari pusat).
+    cy, cx = h_img // 2, w_img // 2
+    dy, dx = int(h_img * 0.11), int(w_img * 0.11)
+    img_cropped = img_terbaik[cy-dy:cy+dy, cx-dx:cx+dx]
+
+    # Resize hasil cropping ke ukuran target
+    return cv2.resize(img_cropped, ukuran, interpolation=cv2.INTER_AREA)
+
+
 def plot_cluster_size(label_cluster, path_output=None):
     """
-    Memplot bar chart + persentase ukuran setiap cluster.
+    Memplot bar chart distribusi ukuran cluster dengan thumbnail gambar
+    biji kopi asli di atas setiap bar, serta pie chart proporsi cluster.
+
+    Cara kerja:
+      - Setiap bar diwarnai dengan rata-rata RGB gambar asli biji kopi
+        di cluster tersebut (tanpa background putih).
+      - Di atas setiap bar ditampilkan thumbnail foto biji kopi asli
+        yang paling representatif untuk cluster tersebut.
     """
+    from matplotlib.offsetbox import OffsetImage, AnnotationBbox
+
     if path_output is None:
         path_output = config.CLUSTER_SIZE_PATH
 
     unique_labels, counts = np.unique(label_cluster, return_counts=True)
     total = counts.sum()
     percentages = (counts / total) * 100
-
-    # Gunakan nama deskriptif
     cluster_labels = [config.get_cluster_name(l) for l in unique_labels]
 
-    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(14, 6))
+    # ----------------------------------------------------------------
+    # Baca labeled_dataset.csv untuk mapping gambar -> cluster
+    # ----------------------------------------------------------------
+    df_labeled = pd.read_csv(config.LABELED_DATASET_CSV)
+    images_dir = config.COFFEE_IMAGES_DIR
 
-    # Bar chart
-    colors = plt.cm.Set3(np.linspace(0, 1, len(unique_labels)))
-    bars = ax1.bar(cluster_labels, counts,
-                   color=colors, edgecolor='black', linewidth=0.8)
-    ax1.set_title('Jumlah Data per Wilayah Distribusi', fontsize=13, fontweight='bold')
-    ax1.set_xlabel('Wilayah Distribusi')
-    ax1.set_ylabel('Jumlah Data')
-    plt.setp(ax1.get_xticklabels(), rotation=30, ha='right')
+    # ----------------------------------------------------------------
+    # Ambil warna rata-rata dari pixel biji kopi (tanpa background)
+    # ----------------------------------------------------------------
+    print("[INFO] Menghitung warna rata-rata pixel gambar asli per cluster...")
+    warna_dari_gambar = ambil_warna_cluster_dari_gambar(
+        labeled_csv_path=config.LABELED_DATASET_CSV,
+        images_dir=images_dir
+    )
+    fallback_colors = plt.cm.Set3(np.linspace(0, 1, len(unique_labels)))
+    colors = []
+    for i, label in enumerate(unique_labels):
+        if warna_dari_gambar and warna_dari_gambar.get(label) is not None:
+            colors.append(warna_dari_gambar[label])
+        else:
+            colors.append(tuple(fallback_colors[i]))
 
-    # Tambahkan angka di atas bar
-    for bar, count in zip(bars, counts):
-        ax1.text(bar.get_x() + bar.get_width()/2., bar.get_height() + 5,
-                 str(count), ha='center', va='bottom', fontweight='bold')
+    # ----------------------------------------------------------------
+    # Ambil gambar representatif per cluster
+    # ----------------------------------------------------------------
+    print("[INFO] Mengambil gambar representatif per cluster...")
+    gambar_per_cluster = {}
+    for label in unique_labels:
+        img = _ambil_gambar_representatif(
+            cluster_id=label,
+            df_labeled=df_labeled,
+            images_dir=images_dir,
+            ukuran=(120, 120)  # Ukuran sedikit lebih besar agar resolusi di bar lebih bagus
+        )
+        gambar_per_cluster[label] = img
+        print(f"  Cluster {label} ({config.get_cluster_name(label)}): "
+              f"{'OK' if img is not None else 'tidak ditemukan'}")
 
-    # Pie chart
-    ax2.pie(counts, labels=[f'{name}\n({p:.1f}%)' for name, p in zip(cluster_labels, percentages)],
-            colors=colors, autopct='', startangle=90, textprops={'fontsize': 9})
+    # ----------------------------------------------------------------
+    # Layout: bar chart (kiri) + pie chart (kanan)
+    # ----------------------------------------------------------------
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(16, 7.5))
+    fig.patch.set_facecolor('#FAFAFA')
+
+    # --- Bar chart ---
+    x_pos = np.arange(len(cluster_labels))
+    bar_width = 0.6
+
+    # Kita buat dummy bars tak terlihat (alpha=0) hanya agar Matplotlib
+    # mengonfigurasi axis, limit, dan label secara otomatis.
+    dummy_bars = ax1.bar(x_pos, counts, color='none', edgecolor='none', width=bar_width)
+
+    ax1.set_title('Jumlah Data per Wilayah Distribusi',
+                  fontsize=13, fontweight='bold', pad=85)
+    ax1.set_xlabel('Wilayah Distribusi', fontsize=10)
+    ax1.set_ylabel('Jumlah Data', fontsize=10)
+    ax1.set_xticks(x_pos)
+    ax1.set_xticklabels(cluster_labels, rotation=30, ha='right', fontsize=9)
+    ax1.set_ylim(0, counts.max() * 1.5)   # ruang ekstra di atas untuk thumbnail
+    ax1.set_xlim(-0.6, len(cluster_labels) - 0.4)  # MEMAKSA rentang X agar semua 8 bar biji kopi terlihat
+    ax1.grid(axis='y', alpha=0.3, linestyle='--')
+    ax1.set_facecolor('#F8F8F8')
+
+    # Menggambar gambar biji kopi asli sebagai tumpukan (stack) di dalam area setiap bar
+    for i, (label, count) in enumerate(zip(unique_labels, counts)):
+        img_arr = gambar_per_cluster.get(label)
+        x_center = i
+        x_left = x_center - bar_width / 2
+        x_right = x_center + bar_width / 2
+
+        if img_arr is not None:
+            # Hitung aspect ratio dan proporsi tinggi tumpukan agar seragam
+            # Tinggi tumpukan diatur agar satu biji kopi bernilai ~35 unit data di sumbu Y
+            h_img, w_img, _ = img_arr.shape
+            
+            # Tentukan target tinggi per biji kopi di sumbu Y (agar proporsional)
+            target_bean_height = 35.0
+            
+            # Hitung berapa banyak biji kopi yang perlu ditumpuk untuk mencapai 'count'
+            num_beans = max(1, int(round(count / target_bean_height)))
+            actual_bean_height = count / num_beans  # Tinggi presisi per segmen
+            
+            # Tumpuk gambar secara vertikal
+            for b in range(num_beans):
+                y_bottom = b * actual_bean_height
+                y_top = (b + 1) * actual_bean_height
+                
+                ax1.imshow(
+                    img_arr,
+                    extent=[x_left, x_right, y_bottom, y_top],
+                    aspect='auto',  # aspect auto aman karena ukuran segmen [x_left, x_right, y_bottom, y_top] sudah proporsional
+                    zorder=2
+                )
+            
+            # Tambahkan outline/border hitam di sekeliling tumpukan agar bentuk bar tetap rapi
+            rect = plt.Rectangle(
+                (x_left, 0), bar_width, count,
+                facecolor='none',
+                edgecolor='#333333',
+                linewidth=1.5,
+                zorder=3
+            )
+            ax1.add_patch(rect)
+        else:
+            # Fallback jika tidak ada gambar
+            ax1.bar(i, count, color=colors[i], edgecolor='#333333', linewidth=1.5, width=bar_width, zorder=2)
+
+    # Angka di atas bar
+    for i, count in enumerate(counts):
+        ax1.text(i, count + counts.max() * 0.012,
+                 str(count), ha='center', va='bottom',
+                 fontweight='bold', fontsize=9, zorder=4)
+
+    # Tempel gambar biji kopi asli berbentuk bulat/kotak kecil sebagai "cap" di atas bar
+    for i, (label, count) in enumerate(zip(unique_labels, unique_labels)):
+        img_arr = gambar_per_cluster.get(label)
+        if img_arr is None:
+            continue
+
+        x_center = i
+        y_top = counts[i] + counts.max() * 0.07
+
+        offset_img = OffsetImage(img_arr, zoom=0.55)
+        offset_img.image.axes = ax1
+
+        ab = AnnotationBbox(
+            offset_img,
+            xy=(x_center, y_top),
+            xycoords='data',
+            frameon=True,
+            bboxprops=dict(
+                boxstyle='round,pad=0.15',
+                edgecolor=colors[i],
+                linewidth=2.5,
+                facecolor='white'
+            ),
+            pad=0.3,
+            zorder=4
+        )
+        ax1.add_artist(ab)
+
+    # --- Pie chart ---
+    wedges, _ = ax2.pie(
+        counts,
+        labels=None,
+        colors=colors,
+        startangle=90,
+        wedgeprops=dict(linewidth=1.2, edgecolor='white')
+    )
+    legend_labels = [
+        f'{name}  ({p:.1f}%)'
+        for name, p in zip(cluster_labels, percentages)
+    ]
+    ax2.legend(
+        wedges, legend_labels,
+        loc='center left',
+        bbox_to_anchor=(1.0, 0.5),
+        fontsize=8.5,
+        framealpha=0.9
+    )
     ax2.set_title('Proporsi Wilayah', fontsize=13, fontweight='bold')
 
-    fig.suptitle('Distribusi Ukuran Wilayah Distribusi', fontsize=14, fontweight='bold', y=1.02)
+    fig.suptitle('Distribusi Ukuran Wilayah Distribusi',
+                 fontsize=15, fontweight='bold', y=1.01)
 
+    plt.tight_layout()
     _simpan_dan_tampilkan(fig, path_output, "Wilayah Size Chart")
 
 
