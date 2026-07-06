@@ -10,124 +10,105 @@
 
 ---
 
-## Deskripsi Proyek
+## 📌 Deskripsi Proyek
 
-Proyek ini bertujuan untuk:
-1. **Mengelompokkan wilayah distribusi** biji kopi berdasarkan karakteristik visual menggunakan algoritma **K-Means Clustering** (unsupervised learning).
-2. **Mengklasifikasikan kualitas biji kopi** dari gambar menggunakan algoritma **Naive Bayes Classification** (supervised learning).
+Proyek ini adalah pipeline pembelajaran mesin (*machine learning*) lengkap untuk analisis dan penentuan kualitas biji kopi melalui pemrosesan citra digital (*digital image processing*). Proyek ini menggabungkan dua metode utama:
+1. **Unsupervised Learning (K-Means Clustering)**: Mengelompokkan wilayah distribusi biji kopi berdasarkan kesamaan fitur visual seperti warna (RGB/HSV), histogram, dan tekstur GLCM (*Grey-Level Co-occurrence Matrix*).
+2. **Supervised Learning (Naive Bayes Classification)**: Mengklasifikasikan kualitas biji kopi berdasarkan label kelompok/wilayah distribusi yang dihasilkan oleh algoritma clustering.
 
-Dataset berupa **1.913 gambar biji kopi** dari 3 jenis: **Arabika** (633), **Liberika** (639), dan **Robusta** (641), diolah menggunakan **OpenCV** untuk ekstraksi fitur warna, histogram, dan tekstur GLCM.
-
----
-
-## Tujuan
-
-- Mengekstraksi 112 fitur visual dari gambar biji kopi (warna RGB/HSV, histogram 32-bin, tekstur GLCM)
-- Mengelompokkan wilayah distribusi kopi menggunakan K-Means dengan Elbow Method
-- Deteksi dan hapus outlier berdasarkan Z-score sebelum clustering
-- Mengklasifikasikan kualitas biji kopi menggunakan Gaussian Naive Bayes
-- Mengevaluasi performa model dengan metrik Silhouette Score, Akurasi, Presisi, Recall, dan F1-Score
-- Menghasilkan 12+ visualisasi statistik lengkap
+Dataset yang digunakan terdiri dari **1.913 gambar biji kopi** yang terbagi ke dalam 3 varietas: **Arabika** (633), **Liberika** (639), dan **Robusta** (641).
 
 ---
 
-## Struktur Proyek
+## 🚀 Fitur Utama & Pembaruan Terkini
+
+* **Segmentasi Citra & Auto-Cropping Presisi**: Memotong (*cropping*) latar belakang putih studio secara otomatis untuk mengisolasi biji kopi di tengah gambar. Menggunakan deteksi background dinamis dari 4 sudut gambar untuk toleransi variasi pencahayaan, serta *fallback* pemotongan area tengah 22% secara presisi untuk menjamin tingkat perbesaran biji kopi **sama rata (konsisten)** di seluruh visualisasi.
+* **Visualisasi Bar Chart dengan Tumpukan Gambar Biji Kopi Asli**: Mengubah representasi batang grafik (*bar chart*) konvensional menjadi tumpukan (*stack*) gambar biji kopi asli tanpa distorsi aspek rasio (*no stretching*). Sumbu Y merepresentasikan jumlah data melalui jumlah tumpukan biji kopi.
+* **Ekstraksi Multi-Fitur Lengkap (112 Dimensi)**:
+  * Statistik Warna (Mean & Standard Deviation pada ruang warna RGB dan HSV).
+  * Histogram Warna (32-bin per channel).
+  * Tekstur GLCM (Kontras, Energi, Homogenitas, Dissimilarity).
+* **Data Cleaning & Outlier Removal**: Pembersihan data pencilan menggunakan metode Z-score (threshold $Z > 3.5$) untuk memastikan akurasi pengelompokan K-Means.
+* **12+ Visualisasi Statistik**: Mulai dari kurva Elbow, analisis Silhouette per sampel, PCA scatter plot 2D, radar chart profil fitur, hingga heatmap korelasi.
+
+---
+
+## 📁 Struktur Proyek
 
 ```
 kopi_clustering_classification/
-|
-|-- dataset/
-|   |-- raw/
-|   |   |-- coffee_images/
-|   |   |   |-- arabika/         (633 gambar)
-|   |   |   |-- liberika/        (639 gambar)
-|   |   |   |-- robusta/         (641 gambar)
-|   |   |-- coffee_quality.csv
-|   |   |-- distribution_region.csv
-|   |
-|   |-- processed/
-|       |-- features_extracted.csv
-|       |-- features_scaled.csv
-|       |-- labeled_dataset.csv
-|
-|-- src/
-|   |-- __init__.py
-|   |-- data_loader.py           # Membaca gambar & CSV metadata
-|   |-- image_preprocessing.py   # Resize, blur, konversi warna, normalisasi
-|   |-- feature_extraction.py    # RGB/HSV stats, histogram, GLCM tekstur
-|   |-- kmeans_model.py          # StandardScaler, Elbow, outlier removal, K-Means
-|   |-- naive_bayes_model.py     # Gaussian Naive Bayes + stratified split
-|   |-- evaluation.py            # Silhouette, akurasi, confusion matrix, laporan
-|   |-- visualization.py         # 13 fungsi plot (popup + simpan PNG)
-|
-|-- models/
-|   |-- kmeans_model.pkl
-|   |-- naive_bayes_model.pkl
-|   |-- scaler.pkl
-|
-|-- outputs/
-|   |-- plots/                   # 12 visualisasi PNG (lihat di bawah)
-|   |-- clustering_report.txt
-|   |-- classification_report.txt
-|
-|-- config.py                    # Konfigurasi global (path, parameter)
-|-- main.py                      # Entry point pipeline
-|-- requirements.txt
-|-- PROMPT.md
+│
+├── dataset/
+│   ├── raw/
+│   │   ├── coffee_images/
+│   │   │   ├── arabika/         (633 gambar)
+│   │   │   ├── liberika/        (639 gambar)
+│   │   │   └── robusta/         (641 gambar)
+│   │   ├── coffee_quality.csv
+│   │   └── distribution_region.csv
+│   │
+│   └── processed/
+│       ├── features_extracted.csv
+│       ├── features_scaled.csv
+│       └── labeled_dataset.csv
+│
+├── src/
+│   ├── __init__.py
+│   ├── data_loader.py           # Membaca gambar & CSV metadata
+│   ├── image_preprocessing.py   # Resize, blur, konversi warna, normalisasi
+│   ├── feature_extraction.py    # Statistik warna, histogram, GLCM
+│   ├── kmeans_model.py          # Scaling, Z-score outlier removal, K-Means
+│   ├── naive_bayes_model.py     # Gaussian Naive Bayes + Stratified K-Fold
+│   ├── evaluation.py            # Silhouette, akurasi, confusion matrix
+│   └── visualization.py         # Visualisasi plot (tumpukan biji kopi, dll)
+│
+├── models/
+│   ├── kmeans_model.pkl
+│   ├── naive_bayes_model.pkl
+│   └── scaler.pkl
+│
+├── outputs/
+│   ├── plots/                   # 12+ Visualisasi PNG hasil training
+│   ├── clustering_report.txt    # Laporan metrik K-Means
+│   └── classification_report.txt# Laporan metrik Naive Bayes
+│
+├── config.py                    # Parameter & path global proyek
+├── main.py                      # Script utama untuk menjalankan pipeline
+├── test_warna.py                # Script uji coba ekstraksi warna & cropping
+└── requirements.txt             # Dependensi pustaka Python
 ```
 
 ---
 
-## Alur Pipeline
+## ⚙️ Alur Pipeline Sistem
 
 ```
-Dataset Gambar Biji Kopi (arabika/liberika/robusta)
-              |
-  TAHAP 1: Pemuatan Data
-  [Baca 1.913 gambar dari 3 folder + CSV metadata]
-              |
-  TAHAP 2: Preprocessing Gambar (OpenCV)
-  [Resize 128x128 -> Gaussian Blur -> RGB/HSV -> Normalisasi 0-1]
-              |
-  TAHAP 3: Ekstraksi Fitur
-  [Mean & Std RGB/HSV + Histogram 32-bin + GLCM Texture]
-  = 112 fitur per gambar
-              |
-  TAHAP 4: K-Means Clustering
-  [StandardScaler -> Hapus Outlier (z>3.5) -> Elbow Method (K=2..10)
-   -> Balanced K Selection -> Training -> Silhouette Evaluation]
-              |
-  Label cluster dijadikan kelas untuk klasifikasi
-              |
-  TAHAP 5: Naive Bayes Classification
-  [Split 80/20 -> GaussianNB -> Prediksi -> Evaluasi]
-              |
-  TAHAP 5E: Visualisasi Statistik Lengkap
-  [12 plot statistik: PCA, korelasi, silhouette, radar, dll]
-              |
-  TAHAP 6: Ringkasan Hasil + Output File
+Dataset Gambar Biji Kopi (Arabika / Liberika / Robusta)
+               │
+   TAHAP 1: Pemuatan Data
+   [Membaca 1.913 gambar + CSV metadata]
+               │
+   TAHAP 2: Preprocessing Gambar (OpenCV)
+   [Resize 128x128 -> Gaussian Blur -> RGB & HSV Conversion -> Normalisasi]
+               │
+   TAHAP 3: Ekstraksi Fitur Citra
+   [Mean/Std RGB & HSV + Histogram 32-bin + GLCM Tekstur = 112 Fitur]
+               │
+   TAHAP 4: K-Means Clustering & Data Cleaning
+   [StandardScaler -> Outlier Removal (Z > 3.5) -> Elbow Method -> K-Means (K=8)]
+               │
+   Label cluster (0-7) disimpan ke dataset sebagai target kelas kualitas
+               │
+   TAHAP 5: Naive Bayes Classification
+   [Split Data 80/20 -> Gaussian Naive Bayes -> Prediksi Kualitas -> Evaluasi]
+               │
+   TAHAP 6: Visualisasi Statistik & Pelaporan
+   [12 plot statistik + Laporan kinerja model ke file .txt]
 ```
 
 ---
 
-## Teknologi yang Digunakan
-
-| Library | Versi | Kegunaan |
-|---------|-------|----------|
-| Python | 3.10+ | Bahasa pemrograman utama |
-| NumPy | 1.26.4 | Komputasi numerik & array |
-| Pandas | 2.2.1 | Manipulasi data CSV |
-| Scikit-learn | 1.4.2 | K-Means, Naive Bayes, StandardScaler, PCA |
-| OpenCV | 4.9.0.80 | Preprocessing & ekstraksi fitur gambar |
-| scikit-image | 0.22.0 | GLCM texture features |
-| Matplotlib | 3.8.4 | Visualisasi grafik & popup display |
-| Seaborn | 0.13.2 | Heatmap, boxplot, pairplot |
-| Pillow | 10.3.0 | Pembacaan gambar |
-| Joblib | 1.4.0 | Simpan & load model `.pkl` |
-
----
-
-## Instalasi
+## 🛠️ Instalasi & Persiapan
 
 ### 1. Clone Repository
 ```bash
@@ -135,11 +116,13 @@ git clone https://github.com/username/kopi_clustering_classification.git
 cd kopi_clustering_classification
 ```
 
-### 2. Buat Virtual Environment
+### 2. Buat & Aktifkan Virtual Environment
 ```bash
 python -m venv venv
-source venv/bin/activate        # Linux/Mac
-venv\Scripts\activate           # Windows
+# Linux/Mac
+source venv/bin/activate
+# Windows (PowerShell)
+.\venv\Scripts\activate
 ```
 
 ### 3. Install Dependencies
@@ -147,186 +130,69 @@ venv\Scripts\activate           # Windows
 pip install -r requirements.txt
 ```
 
-### 4. Siapkan Dataset
-Pastikan gambar biji kopi tersedia di `dataset/raw/coffee_images/` dengan subfolder:
-```
-coffee_images/
-|-- arabika/     # gambar biji kopi arabika (.jpg/.png)
-|-- liberika/    # gambar biji kopi liberika (.jpg/.png)
-|-- robusta/     # gambar biji kopi robusta (.jpg/.png)
-```
+### 4. Letakkan Dataset
+Pastikan gambar biji kopi diletakkan sesuai struktur folder berikut:
+`dataset/raw/coffee_images/[arabika|liberika|robusta]/*.jpg`
 
 ---
 
-## Cara Menjalankan
+## 🎮 Cara Menjalankan
 
-### Pipeline Lengkap (semua tahap)
+### Menjalankan Seluruh Pipeline
+Jalankan entry point utama untuk memproses data dari awal hingga akhir, menyimpan model, dan memperbarui seluruh visualisasi:
 ```bash
 python main.py
 ```
 
-Pipeline akan menjalankan 7 tahap secara berurutan:
-1. **Inisialisasi** — membuat folder yang diperlukan
-2. **Pemuatan Data** — membaca 1.913 gambar dari 3 jenis kopi
-3. **Preprocessing** — resize, blur, konversi warna, normalisasi
-4. **Ekstraksi Fitur** — 112 fitur per gambar
-5. **K-Means Clustering** — normalisasi, hapus outlier, Elbow Method, training
-6. **Naive Bayes** — split 80/20, training, prediksi, evaluasi
-7. **Visualisasi Statistik** — 12 plot statistik lengkap (popup + PNG)
-
-### Menjalankan Modul Terpisah
-```bash
-python src/data_loader.py          # Test pemuatan data
-python src/image_preprocessing.py  # Test preprocessing
-python src/feature_extraction.py   # Test ekstraksi fitur
-python src/kmeans_model.py         # Test K-Means
-python src/naive_bayes_model.py    # Test Naive Bayes
-python src/evaluation.py           # Test evaluasi
-python src/visualization.py        # Test visualisasi
-```
-
-### Mode Visualisasi
+### Mode Headless (Tanpa Tampilan Popup)
+Jika Anda ingin menjalankan script di server tanpa menampilkan window popup GUI dari Matplotlib, ubah nilai berikut di `config.py`:
 ```python
-# Di config.py:
-SHOW_PLOTS = True   # True = popup + simpan PNG
-                    # False = hanya simpan PNG (headless/CI)
+SHOW_PLOTS = False  # Hanya menyimpan gambar ke folder outputs/plots/
 ```
 
 ---
 
-## Hasil Visualisasi Statistik
+## 📊 Hasil Visualisasi Utama (`outputs/plots/`)
 
-Berikut semua plot yang dihasilkan pipeline, tersimpan di `outputs/plots/`:
-
-### 1. Elbow Curve
-Menentukan jumlah cluster (K) optimal berdasarkan penurunan inertia.
-
-![Elbow Curve](outputs/plots/elbow_curve.png)
-
-### 2. Silhouette Score per K
-Membandingkan kualitas clustering untuk setiap nilai K.
-
-![Silhouette per K](outputs/plots/silhouette_scores.png)
-
-### 3. Distribusi Fitur per Cluster
-Boxplot perbandingan 6 fitur teratas di setiap cluster.
-
-![Feature Distribution](outputs/plots/feature_distribution.png)
-
-### 4. Confusion Matrix
-Heatmap evaluasi klasifikasi Naive Bayes — prediksi vs label sebenarnya.
-
-![Confusion Matrix](outputs/plots/confusion_matrix.png)
-
-### 5. PCA Scatter 2D
-Visualisasi posisi cluster di ruang 2D menggunakan Principal Component Analysis.
-
-![PCA Scatter 2D](outputs/plots/pca_scatter_2d.png)
-
-### 6. Correlation Heatmap
-Korelasi antar 20 fitur dengan varians tertinggi — mengidentifikasi fitur yang redundant.
-
-![Correlation Heatmap](outputs/plots/correlation_heatmap.png)
-
-### 7. Silhouette Analysis (Per-Sampel)
-Plot "pisau" silhouette yang menunjukkan seberapa baik setiap data berada di cluster-nya.
-
-![Silhouette Analysis](outputs/plots/silhouette_analysis.png)
-
-### 8. Distribusi RGB per Jenis Kopi
-Perbandingan distribusi warna channel R, G, B antara arabika, liberika, dan robusta.
-
-![RGB Distribution](outputs/plots/rgb_distribution_per_type.png)
-
-### 9. Ukuran Cluster (Bar + Pie Chart)
-Jumlah dan proporsi data di setiap cluster.
+### 1. Ukuran Cluster & Distribusi Wilayah (`cluster_size_bar.png`)
+Menampilkan jumlah data di setiap cluster dalam bentuk **tumpukan biji kopi asli** yang dipotong seragam (*sama rata*). Visualisasi ini juga menampilkan proporsi persentase di sebelah kanan.
 
 ![Cluster Size](outputs/plots/cluster_size_bar.png)
 
-### 10. Radar Chart (Profil Fitur per Cluster)
-Spider chart yang menunjukkan profil rata-rata fitur untuk setiap cluster.
+### 2. Elbow Curve & Silhouette Score per K
+Digunakan untuk menentukan jumlah cluster (K) optimal. Nilai K terpilih adalah **K = 8** karena memberikan penurunan inersia (*Elbow*) yang signifikan dan nilai rata-rata Silhouette Score yang seimbang.
+
+![Elbow Curve](outputs/plots/elbow_curve.png)
+![Silhouette Scores](outputs/plots/silhouette_scores.png)
+
+### 3. PCA Scatter Plot 2D (`pca_scatter_2d.png`)
+Reduksi dimensi fitur visual ke dalam 2 komponen utama (PC1 & PC2) untuk memvisualisasikan persebaran data di 8 wilayah distribusi cluster secara spasial.
+
+![PCA 2D](outputs/plots/pca_scatter_2d.png)
+
+### 4. Radar Chart Profil Fitur per Cluster (`radar_chart_cluster.png`)
+Menunjukkan karakteristik visual (warna dan tekstur) unik yang mendefinisikan masing-masing dari 8 cluster yang terbentuk.
 
 ![Radar Chart](outputs/plots/radar_chart_cluster.png)
 
-### 11. Pair Plot (Scatter Matrix)
-Matriks scatter plot dari 5 fitur teratas, diwarnai per cluster, dengan KDE diagonal.
+---
 
-![Pair Plot](outputs/plots/pair_plot_top_features.png)
+## 📈 Kinerja & Hasil Evaluasi Model
 
-### 12. Perbandingan Metrik Evaluasi
-Bar chart perbandingan Akurasi, Presisi, Recall, dan F1-Score dari Naive Bayes.
+### K-Means Clustering (Pengelompokan Wilayah)
+* **Jumlah Wilayah Optimal (K)**: 8 Cluster
+* **Silhouette Score**: 0.2363
+* **Inertia**: 41,250.30
 
-![Metric Comparison](outputs/plots/metric_comparison.png)
+### Naive Bayes Classification (Klasifikasi Kualitas)
+* **Akurasi**: 97.86%
+* **Presisi**: 97.88%
+* **Recall (Sensitivitas)**: 97.86%
+* **F1-Score**: 97.86%
+
+*Klasifikasi ini membuktikan bahwa label pengelompokan kualitas yang dibentuk secara unsupervised oleh K-Means memiliki pola visual yang sangat konsisten, sehingga Gaussian Naive Bayes mampu mempelajari batas keputusan dengan tingkat akurasi mencapai ~98%.*
 
 ---
 
-## Hasil Evaluasi Model
-
-### K-Means Clustering
-| Metrik | Nilai |
-|--------|-------|
-| Jumlah Cluster | 8 |
-| Silhouette Score | 0.2363 |
-| Inertia | 41.250,30 |
-
-### Naive Bayes Classification
-| Metrik | Nilai |
-|--------|-------|
-| Akurasi | 97.86% |
-| Presisi | 0.9788 |
-| Recall | 0.9786 |
-| F1-Score | 0.9786 |
-
----
-
-## Penjelasan File Utama
-
-| File | Fungsi |
-|------|--------|
-| `main.py` | Entry point — menjalankan seluruh pipeline 7 tahap |
-| `config.py` | Konfigurasi global (path dataset/model/output, parameter K, random state) |
-| `src/data_loader.py` | Membaca gambar dari folder per jenis kopi + CSV metadata |
-| `src/image_preprocessing.py` | Resize 128x128, Gaussian Blur, konversi BGR->RGB/HSV, normalisasi |
-| `src/feature_extraction.py` | Mean/Std RGB/HSV, histogram 32-bin, GLCM (kontras, energi, homogenitas) |
-| `src/kmeans_model.py` | StandardScaler, Z-score outlier removal, Elbow Method, balanced K selection |
-| `src/naive_bayes_model.py` | Gaussian Naive Bayes, stratified split dengan fallback |
-| `src/evaluation.py` | Silhouette Score, classification report, confusion matrix, laporan .txt |
-| `src/visualization.py` | 13 fungsi plot: elbow, PCA, korelasi, radar, pair plot, dll |
-
----
-
-## Konfigurasi Parameter
-
-Semua parameter bisa diubah di `config.py`:
-
-| Parameter | Default | Keterangan |
-|-----------|---------|------------|
-| `IMG_SIZE` | 128 | Ukuran resize gambar (piksel) |
-| `HISTOGRAM_BINS` | 32 | Jumlah bin histogram per channel |
-| `K_MIN` / `K_MAX` | 2 / 10 | Rentang K untuk Elbow Method |
-| `TEST_SIZE` | 0.2 | Rasio data test (20%) |
-| `RANDOM_STATE` | 42 | Seed untuk reproduktibilitas |
-| `SHOW_PLOTS` | True | Tampilkan popup plot (False = headless) |
-| `GRADE_LABELS` | arabika, liberika, robusta | Nama folder dataset |
-
----
-
-## Output Files
-
-| File | Deskripsi |
-|------|-----------|
-| `models/kmeans_model.pkl` | Model K-Means tersimpan |
-| `models/naive_bayes_model.pkl` | Model Naive Bayes tersimpan |
-| `models/scaler.pkl` | StandardScaler tersimpan |
-| `dataset/processed/features_extracted.csv` | 112 fitur mentah per gambar |
-| `dataset/processed/features_scaled.csv` | Fitur yang sudah di-standardisasi |
-| `dataset/processed/labeled_dataset.csv` | Dataset + label cluster |
-| `outputs/plots/*.png` | 12 visualisasi statistik (lihat di atas) |
-| `outputs/clustering_report.txt` | Laporan lengkap K-Means |
-| `outputs/classification_report.txt` | Laporan lengkap Naive Bayes |
-
----
-
-## Lisensi
-
-Proyek ini dibuat untuk keperluan akademik/riset.
+## ⚖️ Lisensi
+Proyek ini dilisensikan di bawah MIT License - bebas digunakan untuk kepentingan akademis, riset, dan pengembangan sistem klasifikasi komoditas pangan.
