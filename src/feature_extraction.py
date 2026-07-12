@@ -152,13 +152,14 @@ def ekstraksi_fitur_gambar(hasil_preprocessing, nama_file=""):
         return None
 
 
-def ekstraksi_batch(list_hasil_preprocessing, list_nama_file):
+def ekstraksi_batch(list_hasil_preprocessing, list_nama_file, list_label=None):
     """
     Mengekstrak fitur dari batch gambar yang sudah dipreprocessing.
 
     Parameter:
         list_hasil_preprocessing (list): List hasil preprocessing per gambar.
         list_nama_file (list): List nama file per gambar.
+        list_label (list, opsional): List label jenis kopi asli.
 
     Return:
         pd.DataFrame: DataFrame berisi semua fitur per gambar.
@@ -168,9 +169,15 @@ def ekstraksi_batch(list_hasil_preprocessing, list_nama_file):
 
     print(f"[INFO] Memulai ekstraksi fitur untuk {total} gambar...")
 
-    for i, (hasil_prep, nama) in enumerate(zip(list_hasil_preprocessing, list_nama_file)):
+    for i in range(total):
+        hasil_prep = list_hasil_preprocessing[i]
+        nama = list_nama_file[i]
+        label = list_label[i] if list_label is not None else None
+
         fitur = ekstraksi_fitur_gambar(hasil_prep, nama_file=nama)
         if fitur is not None:
+            if label is not None:
+                fitur['jenis_kopi'] = label
             semua_fitur.append(fitur)
         else:
             print(f"[ERROR] Ekstraksi fitur gambar ke-{i+1} gagal, dilewati.")
@@ -180,6 +187,14 @@ def ekstraksi_batch(list_hasil_preprocessing, list_nama_file):
             print(f"[INFO] Progress ekstraksi: {i+1}/{total} gambar...")
 
     df_fitur = pd.DataFrame(semua_fitur)
+
+    # Letakkan jenis_kopi di depan (setelah nama_file) jika ada
+    if 'jenis_kopi' in df_fitur.columns:
+        cols = list(df_fitur.columns)
+        cols.remove('jenis_kopi')
+        cols.insert(1, 'jenis_kopi')
+        df_fitur = df_fitur[cols]
+
     print(f"[OK] Ekstraksi fitur selesai: {df_fitur.shape[0]} data, {df_fitur.shape[1]} kolom fitur.")
 
     return df_fitur

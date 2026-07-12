@@ -30,6 +30,7 @@ Dataset yang digunakan terdiri dari **1.913 gambar biji kopi** yang terbagi ke d
   * Tekstur GLCM (Kontras, Energi, Homogenitas, Dissimilarity).
 * **Data Cleaning & Outlier Removal**: Pembersihan data pencilan menggunakan metode Z-score (threshold $Z > 3.5$) untuk memastikan akurasi pengelompokan K-Means.
 * **14+ Visualisasi Statistik**: Mulai dari kurva Elbow, analisis Silhouette per sampel, PCA scatter plot 2D, radar chart profil fitur, hingga heatmap korelasi.
+* **Batch Prediksi Semua Gambar & Ekspor Excel**: `predict.py` sekarang dapat memproses seluruh folder atau keyword `all`, lalu menyimpan hasil prediksi ke `outputs/predictions.xlsx`.
 
 ---
 
@@ -264,6 +265,20 @@ Perbandingan nilai rata-rata Akurasi, Presisi, Recall, dan F1-Score dari model N
 Jalankan entry point utama untuk mengekstrak fitur, melakukan clustering, melatih classifier, dan menyimpan visualisasi:
 ```bash
 python main.py
+```
+
+### Batch Prediksi & Ekspor Excel
+Gunakan `predict.py` untuk memproses seluruh dataset gambar sekaligus, kemudian menyimpan hasil prediksi model ke file Excel.
+```bash
+python predict.py all
+```
+Atau jalankan pada folder tertentu:
+```bash
+python predict.py dataset/raw/coffee_images/arabika
+```
+Untuk menentukan nama file hasil sendiri:
+```bash
+python predict.py all outputs/predictions.xlsx
 ```
 
 ### Mode Headless (Tanpa Tampilan Popup)

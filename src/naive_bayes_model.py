@@ -14,8 +14,9 @@ import numpy as np
 import pandas as pd
 from sklearn.model_selection import train_test_split
 from sklearn.naive_bayes import GaussianNB
+from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score
-from sklearn.preprocessing import LabelEncoder
+from sklearn.preprocessing import LabelEncoder, StandardScaler
 import joblib
 
 import sys
@@ -36,7 +37,7 @@ def siapkan_data_training(df_fitur, kolom_label='cluster_label'):
     """
     try:
         # Pisahkan kolom non-fitur dan label
-        kolom_buang = ['nama_file', kolom_label]
+        kolom_buang = ['nama_file', 'cluster_label', 'jenis_kopi']
         nama_fitur = [c for c in df_fitur.columns if c not in kolom_buang]
 
         X = df_fitur[nama_fitur].values
@@ -107,6 +108,87 @@ def training_naive_bayes(X, y, test_size=None, random_state=None):
 
     return {
         'model': model,
+        'X_train': X_train,
+        'X_test': X_test,
+        'y_train': y_train,
+        'y_test': y_test,
+        'y_pred': y_pred,
+    }
+
+
+def training_random_forest(X, y, scaler=None, feature_names=None, save_scaler_path=None, test_size=None, random_state=None, n_estimators=100):
+    """
+    Melakukan training model Random Forest.
+
+    Parameter:
+        X (np.ndarray): Data fitur.
+        y (np.ndarray): Label kelas (encoded).
+        scaler (StandardScaler, optional): Scaler yang sudah fit.
+        feature_names (list, optional): List nama fitur urut sesuai kolom X.
+        save_scaler_path (str, optional): Path untuk menyimpan scaler.
+        test_size (float): Rasio data test (default dari config).
+        random_state (int): Random state (default dari config).
+        n_estimators (int): Jumlah pohon dalam Random Forest.
+
+    Return:
+        dict: {
+            'model': RandomForestClassifier,
+            'scaler': StandardScaler,
+            'X_train': np.ndarray, 'X_test': np.ndarray,
+            'y_train': np.ndarray, 'y_test': np.ndarray,
+            'y_pred': np.ndarray
+        }
+    """
+    if test_size is None:
+        test_size = config.TEST_SIZE
+    if random_state is None:
+        random_state = config.RANDOM_STATE
+
+    print(f"[INFO] Split data: {int((1-test_size)*100)}% train, {int(test_size*100)}% test")
+
+    try:
+        X_train, X_test, y_train, y_test = train_test_split(
+            X, y, test_size=test_size, random_state=random_state, stratify=y
+        )
+    except ValueError:
+        print("[INFO] Stratified split gagal (kelas terlalu sedikit), menggunakan split biasa.")
+        X_train, X_test, y_train, y_test = train_test_split(
+            X, y, test_size=test_size, random_state=random_state
+        )
+
+    print(f"     Data train: {X_train.shape[0]} sampel")
+    print(f"     Data test : {X_test.shape[0]} sampel")
+
+    if scaler is None:
+        scaler = StandardScaler()
+        X_train_scaled = scaler.fit_transform(X_train)
+        X_test_scaled = scaler.transform(X_test)
+    else:
+        X_train_scaled = scaler.transform(X_train)
+        X_test_scaled = scaler.transform(X_test)
+
+    if feature_names is not None and not hasattr(scaler, 'feature_names_'):
+        try:
+            scaler.feature_names_ = list(feature_names)
+        except Exception:
+            pass
+
+    model = RandomForestClassifier(n_estimators=n_estimators, random_state=random_state)
+    model.fit(X_train_scaled, y_train)
+    print("[OK] Training Random Forest selesai.")
+
+    if save_scaler_path is not None:
+        try:
+            joblib.dump(scaler, save_scaler_path)
+            print(f"[OK] Scaler Random Forest disimpan ke: {save_scaler_path}")
+        except Exception as e:
+            print(f"[ERROR] Gagal menyimpan scaler Random Forest: {e}")
+
+    y_pred = model.predict(X_test_scaled)
+
+    return {
+        'model': model,
+        'scaler': scaler,
         'X_train': X_train,
         'X_test': X_test,
         'y_train': y_train,

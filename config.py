@@ -37,6 +37,11 @@ KMEANS_MODEL_PATH = os.path.join(MODELS_DIR, "kmeans_model.pkl")
 NAIVE_BAYES_MODEL_PATH = os.path.join(MODELS_DIR, "naive_bayes_model.pkl")
 SCALER_PATH = os.path.join(MODELS_DIR, "scaler.pkl")
 
+# Path model untuk klasifikasi jenis kopi (Arabika, Liberika, Robusta)
+VARIETY_MODEL_PATH = os.path.join(MODELS_DIR, "variety_classifier_model.pkl")
+VARIETY_LABEL_ENCODER_PATH = os.path.join(MODELS_DIR, "variety_label_encoder.pkl")
+VARIETY_SCALER_PATH = os.path.join(MODELS_DIR, "variety_scaler.pkl")
+
 # ============================================================
 # PATH OUTPUT & VISUALISASI
 # ============================================================
@@ -50,6 +55,10 @@ CONFUSION_MATRIX_PATH = os.path.join(PLOTS_DIR, "confusion_matrix.png")
 FEATURE_DISTRIBUTION_PATH = os.path.join(PLOTS_DIR, "feature_distribution.png")
 SAMPLE_IMAGES_PATH = os.path.join(PLOTS_DIR, "sample_images.png")
 SILHOUETTE_PER_K_PATH = os.path.join(PLOTS_DIR, "silhouette_scores.png")
+
+# File output visualisasi - plot jenis kopi asli (BARU)
+VARIETY_CONFUSION_MATRIX_PATH = os.path.join(PLOTS_DIR, "variety_confusion_matrix.png")
+VARIETY_PER_CLASS_PATH = os.path.join(PLOTS_DIR, "variety_per_class_metrics.png")
 
 # File output visualisasi - plot statistik tambahan (BARU)
 PCA_SCATTER_PATH = os.path.join(PLOTS_DIR, "pca_scatter_2d.png")
@@ -68,6 +77,8 @@ SHOW_PLOTS = True  # True = tampilkan popup, False = hanya simpan PNG
 # File output laporan
 CLUSTERING_REPORT_PATH = os.path.join(OUTPUTS_DIR, "clustering_report.txt")
 CLASSIFICATION_REPORT_PATH = os.path.join(OUTPUTS_DIR, "classification_report.txt")
+VARIETY_CLASSIFICATION_REPORT_PATH = os.path.join(OUTPUTS_DIR, "variety_classification_report.txt")
+PREDICTIONS_EXCEL_PATH = os.path.join(OUTPUTS_DIR, "predictions.xlsx")
 
 # ============================================================
 # PARAMETER PREPROCESSING GAMBAR

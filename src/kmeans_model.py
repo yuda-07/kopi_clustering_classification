@@ -34,8 +34,8 @@ def normalisasi_fitur(df_fitur):
         tuple: (df_scaled: pd.DataFrame, scaler: StandardScaler)
     """
     try:
-        # Pisahkan kolom non-numerik (nama_file) dari kolom fitur
-        kolom_non_fitur = ['nama_file']
+        # Pisahkan kolom non-numerik (nama_file & jenis_kopi) dari kolom fitur
+        kolom_non_fitur = [col for col in ['nama_file', 'jenis_kopi'] if col in df_fitur.columns]
         kolom_fitur = [c for c in df_fitur.columns if c not in kolom_non_fitur]
 
         # Inisialisasi scaler
@@ -47,12 +47,13 @@ def normalisasi_fitur(df_fitur):
         # Buat DataFrame baru dengan nama kolom yang sama
         df_scaled = pd.DataFrame(data_scaled, columns=kolom_fitur)
 
-        # Tambahkan kembali kolom non-fitur
-        for col in kolom_non_fitur:
+        # Tambahkan kembali kolom non-fitur secara berurutan
+        for idx, col in enumerate(kolom_non_fitur):
             if col in df_fitur.columns:
-                df_scaled.insert(0, col, df_fitur[col].values)
+                df_scaled.insert(idx, col, df_fitur[col].values)
 
-        print(f"[OK] Normalisasi fitur berhasil: {df_scaled.shape[1]-1} fitur numerik di-scale.")
+        n_fitur_numerik = df_scaled.shape[1] - len(kolom_non_fitur)
+        print(f"[OK] Normalisasi fitur berhasil: {n_fitur_numerik} fitur numerik di-scale.")
         return df_scaled, scaler
 
     except Exception as e:
@@ -72,7 +73,8 @@ def hapus_outlier(df_scaled, threshold_z=3.5):
     Return:
         pd.DataFrame: DataFrame tanpa outlier.
     """
-    kolom_fitur = [c for c in df_scaled.columns if c != 'nama_file']
+    kolom_non_fitur = ['nama_file', 'jenis_kopi']
+    kolom_fitur = [c for c in df_scaled.columns if c not in kolom_non_fitur]
     data_num = df_scaled[kolom_fitur].values
 
     # Hitung Z-score absolut untuk setiap fitur
@@ -129,8 +131,9 @@ def elbow_method(df_scaled, k_min=None, k_max=None):
     if k_max is None:
         k_max = config.K_MAX
 
-    # Ambil hanya kolom numerik (buang nama_file)
-    kolom_fitur = [c for c in df_scaled.columns if c != 'nama_file']
+    # Ambil hanya kolom numerik (buang nama_file dan jenis_kopi)
+    kolom_non_fitur = ['nama_file', 'jenis_kopi']
+    kolom_fitur = [c for c in df_scaled.columns if c not in kolom_non_fitur]
     X = df_scaled[kolom_fitur].values
 
     nilai_k = list(range(k_min, k_max + 1))
@@ -155,7 +158,7 @@ def elbow_method(df_scaled, k_min=None, k_max=None):
 
     # Tentukan K optimal berdasarkan Silhouette Score tertinggi,
     # TAPI tolak K yang menghasilkan cluster terlalu kecil (< 5% dari total data)
-    X = df_scaled[[c for c in df_scaled.columns if c != 'nama_file']].values
+    X = df_scaled[[c for c in df_scaled.columns if c not in ['nama_file', 'jenis_kopi']]].values
     n_total = len(X)
     k_optimal = None
     best_score = -1
@@ -208,8 +211,9 @@ def training_kmeans(df_scaled, n_clusters=None):
     if n_clusters is None:
         n_clusters = config.OPTIMAL_K if config.OPTIMAL_K else 3
 
-    # Ambil hanya kolom numerik
-    kolom_fitur = [c for c in df_scaled.columns if c != 'nama_file']
+    # Ambil hanya kolom numerik (buang nama_file dan jenis_kopi)
+    kolom_non_fitur = ['nama_file', 'jenis_kopi']
+    kolom_fitur = [c for c in df_scaled.columns if c not in kolom_non_fitur]
     X = df_scaled[kolom_fitur].values
 
     print(f"[INFO] Melatih K-Means dengan K={n_clusters} cluster...")

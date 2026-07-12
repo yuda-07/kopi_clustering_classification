@@ -233,17 +233,20 @@ def plot_silhouette_per_k(nilai_k, silhouette_scores, path_output=None):
 # ============================================================
 # 3. CONFUSION MATRIX
 # ============================================================
-def plot_confusion_matrix(y_test, y_pred, label_names=None, path_output=None):
+def plot_confusion_matrix(y_test, y_pred, label_names=None, path_output=None, title=None):
     """Memplot Confusion Matrix sebagai heatmap."""
     if path_output is None:
         path_output = config.CONFUSION_MATRIX_PATH
+
+    if title is None:
+        title = 'Confusion Matrix - Klasifikasi Wilayah Distribusi\n(Naive Bayes)'
 
     cm = confusion_matrix(y_test, y_pred)
 
     fig, ax = plt.subplots(figsize=(9, 7))
     sns.heatmap(cm, annot=True, fmt='d', cmap='Blues',
                 xticklabels=label_names, yticklabels=label_names, ax=ax)
-    ax.set_title('Confusion Matrix - Klasifikasi Wilayah Distribusi\n(Naive Bayes)', fontsize=14, fontweight='bold')
+    ax.set_title(title, fontsize=14, fontweight='bold')
     ax.set_xlabel('Prediksi Wilayah', fontsize=12)
     ax.set_ylabel('Wilayah Sebenarnya', fontsize=12)
 
@@ -258,7 +261,8 @@ def plot_distribusi_cluster(df_scaled, label_cluster, fitur_pilih=None, path_out
     if path_output is None:
         path_output = config.FEATURE_DISTRIBUTION_PATH
 
-    kolom_fitur = [c for c in df_scaled.columns if c != 'nama_file']
+    kolom_non_fitur = ['nama_file', 'jenis_kopi', 'cluster_label']
+    kolom_fitur = [c for c in df_scaled.columns if c not in kolom_non_fitur]
     if fitur_pilih is None:
         fitur_pilih = kolom_fitur[:6]
 
@@ -382,7 +386,8 @@ def plot_correlation_heatmap(df_scaled, max_fitur=20, path_output=None):
     if path_output is None:
         path_output = config.CORRELATION_HEATMAP_PATH
 
-    kolom_fitur = [c for c in df_scaled.columns if c != 'nama_file']
+    kolom_non_fitur = ['nama_file', 'jenis_kopi', 'cluster_label']
+    kolom_fitur = [c for c in df_scaled.columns if c not in kolom_non_fitur]
 
     # Pilih fitur dengan varians tertinggi agar heatmap tidak terlalu padat
     if len(kolom_fitur) > max_fitur:
@@ -785,7 +790,8 @@ def plot_radar_chart(df_scaled, label_cluster, max_fitur=10, path_output=None):
     if path_output is None:
         path_output = config.RADAR_CHART_PATH
 
-    kolom_fitur = [c for c in df_scaled.columns if c != 'nama_file']
+    kolom_non_fitur = ['nama_file', 'jenis_kopi', 'cluster_label']
+    kolom_fitur = [c for c in df_scaled.columns if c not in kolom_non_fitur]
 
     # Pilih fitur dengan varians tertinggi
     if len(kolom_fitur) > max_fitur:
@@ -847,7 +853,8 @@ def plot_pair_plot(df_scaled, label_cluster, max_fitur=5, path_output=None):
     if path_output is None:
         path_output = config.PAIR_PLOT_PATH
 
-    kolom_fitur = [c for c in df_scaled.columns if c != 'nama_file']
+    kolom_non_fitur = ['nama_file', 'jenis_kopi', 'cluster_label']
+    kolom_fitur = [c for c in df_scaled.columns if c not in kolom_non_fitur]
 
     # Pilih fitur dengan varians tertinggi
     if len(kolom_fitur) > max_fitur:

@@ -100,12 +100,12 @@ def tahap_preprocessing(list_gambar):
 # ============================================================
 # TAHAP 3: Ekstraksi Fitur
 # ============================================================
-def tahap_ekstraksi_fitur(list_hasil_prep, list_nama):
+def tahap_ekstraksi_fitur(list_hasil_prep, list_nama, list_label=None):
     """Mengekstrak fitur dari semua gambar yang sudah dipreprocessing."""
     cetak_banner("TAHAP 3: EKSTRAKSI FITUR")
 
-    # Ekstrak fitur dari batch gambar
-    df_fitur = feature_extraction.ekstraksi_batch(list_hasil_prep, list_nama)
+    # Ekstrak fitur dari batch gambar dengan label jenis kopi asli jika ada
+    df_fitur = feature_extraction.ekstraksi_batch(list_hasil_prep, list_nama, list_label=list_label)
 
     # Simpan hasil ekstraksi fitur ke CSV
     feature_extraction.simpan_fitur(df_fitur)
@@ -157,7 +157,7 @@ def tahap_kmeans_clustering(df_fitur):
 
     # 4e. Evaluasi clustering
     print("\n[SUB-TAHAP 4E] Evaluasi K-Means Clustering...")
-    kolom_fitur = [c for c in df_scaled.columns if c != 'nama_file']
+    kolom_fitur = [c for c in df_scaled.columns if c not in ['nama_file', 'jenis_kopi']]
     X_fitur = df_scaled[kolom_fitur].values
     hasil_eval_km = evaluation.evaluasi_kmeans(X_fitur, label_cluster, inertia=inertia)
     evaluation.simpan_laporan_clustering(hasil_eval_km)
@@ -230,9 +230,79 @@ def tahap_naive_bayes(df_labeled, label_encoder_classes=None):
 
 
 # ============================================================
+# TAHAP 5B: Random Forest Classification untuk Jenis Kopi Asli
+# ============================================================
+def tahap_naive_bayes_variety(df_fitur):
+    """Melakukan klasifikasi jenis biji kopi asli menggunakan Random Forest."""
+    cetak_banner("TAHAP 5B: KLASIFIKASI JENIS BIJI KOPI ASLI (RANDOM FOREST)")
+
+    # 5b-a. Siapkan data training
+    print("[SUB-TAHAP 5B-A] Menyiapkan data training jenis kopi...")
+    X, y, nama_fitur, label_encoder = naive_bayes_model.siapkan_data_training(
+        df_fitur, kolom_label='jenis_kopi'
+    )
+    if X is None:
+        print("[ERROR] Gagal menyiapkan data training Random Forest jenis kopi!")
+        sys.exit(1)
+
+    # Simpan label encoder jenis kopi agar dapat digunakan saat prediksi
+    import joblib
+    try:
+        joblib.dump(label_encoder, config.VARIETY_LABEL_ENCODER_PATH)
+        print(f"[OK] LabelEncoder jenis kopi disimpan ke: {config.VARIETY_LABEL_ENCODER_PATH}")
+    except Exception as e:
+        print(f"[ERROR] Gagal menyimpan LabelEncoder jenis kopi: {e}")
+
+    # 5b-b. Training model Random Forest untuk jenis kopi
+    print("\n[SUB-TAHAP 5B-B] Training Random Forest jenis kopi...")
+    hasil_training = naive_bayes_model.training_random_forest(
+        X,
+        y,
+        feature_names=nama_fitur,
+        save_scaler_path=config.VARIETY_SCALER_PATH,
+        n_estimators=200
+    )
+    model_nb = hasil_training['model']
+    
+    # Simpan model jenis kopi
+    naive_bayes_model.simpan_model_nb(model_nb, path_output=config.VARIETY_MODEL_PATH)
+
+    # 5b-c. Evaluasi model jenis kopi
+    print("\n[SUB-TAHAP 5B-C] Evaluasi Random Forest Classification jenis kopi...")
+    label_names = [str(c) for c in label_encoder.classes_]
+    hasil_eval_nb = evaluation.evaluasi_naive_bayes(
+        hasil_training['y_test'],
+        hasil_training['y_pred'],
+        label_names=label_names
+    )
+    evaluation.simpan_laporan_klasifikasi(hasil_eval_nb, path_output=config.VARIETY_CLASSIFICATION_REPORT_PATH)
+
+    # 5b-d. Visualisasi confusion matrix jenis kopi
+    print("\n[SUB-TAHAP 5B-D] Visualisasi Confusion Matrix jenis kopi...")
+    visualization.plot_confusion_matrix(
+        hasil_training['y_test'],
+        hasil_training['y_pred'],
+        label_names=label_names,
+        path_output=config.VARIETY_CONFUSION_MATRIX_PATH,
+        title='Confusion Matrix - Klasifikasi Jenis Kopi Asli\n(Naive Bayes)'
+    )
+
+    # 5b-e. Visualisasi metrik per kelas jenis kopi
+    print("\n[SUB-TAHAP 5B-E] Visualisasi Performa per Kelas jenis kopi...")
+    visualization.plot_per_class_metrics(
+        hasil_training['y_test'],
+        hasil_training['y_pred'],
+        label_names=label_names,
+        path_output=config.VARIETY_PER_CLASS_PATH
+    )
+
+    return hasil_training, hasil_eval_nb, label_encoder
+
+
+# ============================================================
 # TAHAP 6: Ringkasan & Output
 # ============================================================
-def tahap_ringkasan(hasil_eval_km, hasil_eval_nb):
+def tahap_ringkasan(hasil_eval_km, hasil_eval_nb, hasil_eval_variety=None):
     """Menampilkan ringkasan akhir seluruh pipeline."""
     cetak_banner("TAHAP 6: RINGKASAN HASIL")
 
@@ -249,27 +319,39 @@ def tahap_ringkasan(hasil_eval_km, hasil_eval_nb):
         nama = config.get_cluster_name(cluster)
         print(f"    {nama:<18} : {jumlah} data")
 
-    # Ringkasan Naive Bayes
-    print("\n  [Naive Bayes Classification]")
+    # Ringkasan Naive Bayes Wilayah
+    print("\n  [Naive Bayes Classification (Wilayah Distribusi)]")
     print(f"  Akurasi             : {hasil_eval_nb['akurasi']:.4f} ({hasil_eval_nb['akurasi']*100:.2f}%)")
     print(f"  Presisi             : {hasil_eval_nb['presisi']:.4f}")
     print(f"  Recall              : {hasil_eval_nb['recall']:.4f}")
     print(f"  F1-Score            : {hasil_eval_nb['f1_score']:.4f}")
+
+    # Ringkasan Naive Bayes Jenis Kopi
+    if hasil_eval_variety is not None:
+        print("\n  [Random Forest Classification (Jenis Biji Kopi Asli)]")
+        print(f"  Akurasi             : {hasil_eval_variety['akurasi']:.4f} ({hasil_eval_variety['akurasi']*100:.2f}%)")
+        print(f"  Presisi             : {hasil_eval_variety['presisi']:.4f}")
+        print(f"  Recall              : {hasil_eval_variety['recall']:.4f}")
+        print(f"  F1-Score            : {hasil_eval_variety['f1_score']:.4f}")
 
     # Daftar file output
     print("\n  [File Output yang Dihasilkan]")
     print("  " + "-" * 50)
     file_output = [
         ("Model K-Means", config.KMEANS_MODEL_PATH),
-        ("Model Naive Bayes", config.NAIVE_BAYES_MODEL_PATH),
+        ("Model Naive Bayes (Wilayah)", config.NAIVE_BAYES_MODEL_PATH),
+        ("Model Naive Bayes (Jenis)", config.VARIETY_MODEL_PATH),
         ("Scaler", config.SCALER_PATH),
+        ("Scaler Jenis", config.VARIETY_SCALER_PATH),
+        ("Label Encoder Jenis", config.VARIETY_LABEL_ENCODER_PATH),
         ("Fitur Extracted", config.FEATURES_EXTRACTED_CSV),
         ("Fitur Scaled", config.FEATURES_SCALED_CSV),
         ("Labeled Dataset", config.LABELED_DATASET_CSV),
         ("Elbow Curve", config.ELBOW_CURVE_PATH),
         ("Silhouette per K", config.SILHOUETTE_PER_K_PATH),
         ("Feature Distribution", config.FEATURE_DISTRIBUTION_PATH),
-        ("Confusion Matrix", config.CONFUSION_MATRIX_PATH),
+        ("Confusion Matrix (Wilayah)", config.CONFUSION_MATRIX_PATH),
+        ("Confusion Matrix (Jenis)", config.VARIETY_CONFUSION_MATRIX_PATH),
         ("PCA Scatter 2D", config.PCA_SCATTER_PATH),
         ("Correlation Heatmap", config.CORRELATION_HEATMAP_PATH),
         ("Silhouette Analysis", config.SILHOUETTE_ANALYSIS_PATH),
@@ -279,8 +361,10 @@ def tahap_ringkasan(hasil_eval_km, hasil_eval_nb):
         ("Pair Plot", config.PAIR_PLOT_PATH),
         ("Metric Comparison", config.METRIC_COMPARISON_PATH),
         ("Per-Wilayah Metrics", config.CLASSIFICATION_PER_CLASS_PATH),
+        ("Per-Jenis Metrics", config.VARIETY_PER_CLASS_PATH),
         ("Laporan Clustering", config.CLUSTERING_REPORT_PATH),
-        ("Laporan Klasifikasi", config.CLASSIFICATION_REPORT_PATH),
+        ("Laporan Klasifikasi (Wilayah)", config.CLASSIFICATION_REPORT_PATH),
+        ("Laporan Klasifikasi (Jenis)", config.VARIETY_CLASSIFICATION_REPORT_PATH),
     ]
     for nama, path in file_output:
         status = "[OK]" if os.path.exists(path) else "[--]"
@@ -315,17 +399,20 @@ def main():
     list_hasil_prep = tahap_preprocessing(list_gambar)
 
     # TAHAP 3: Ekstraksi Fitur
-    df_fitur = tahap_ekstraksi_fitur(list_hasil_prep, list_nama)
+    df_fitur = tahap_ekstraksi_fitur(list_hasil_prep, list_nama, list_label=list_label)
 
     # TAHAP 4: K-Means Clustering
     df_scaled, df_labeled, scaler, label_cluster, hasil_eval_km, hasil_elbow = tahap_kmeans_clustering(df_fitur)
 
-    # TAHAP 5: Naive Bayes Classification
+    # TAHAP 5: Naive Bayes Classification (Wilayah Distribusi)
     hasil_training_nb, hasil_eval_nb, label_encoder = tahap_naive_bayes(df_labeled)
+
+    # TAHAP 5B: Random Forest Classification (Jenis Kopi Asli)
+    hasil_training_variety, hasil_eval_variety, label_encoder_variety = tahap_naive_bayes_variety(df_fitur)
 
     # TAHAP 5E: Visualisasi Statistik Lengkap
     cetak_banner("TAHAP 5E: VISUALISASI STATISTIK WILAYAH DISTRIBUSI")
-    kolom_fitur_nb = [c for c in df_scaled.columns if c != 'nama_file']
+    kolom_fitur_nb = [c for c in df_scaled.columns if c not in ['nama_file', 'jenis_kopi']]
     X_fitur_final = df_scaled[kolom_fitur_nb].values
 
     visualization.jalankan_semua_visualisasi_statistik(
@@ -339,7 +426,7 @@ def main():
     )
 
     # TAHAP 6: Ringkasan
-    tahap_ringkasan(hasil_eval_km, hasil_eval_nb)
+    tahap_ringkasan(hasil_eval_km, hasil_eval_nb, hasil_eval_variety=hasil_eval_variety)
 
 
 # ============================================================
