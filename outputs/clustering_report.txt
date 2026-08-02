@@ -1,27 +1,27 @@
 ============================================================
-  LAPORAN EVALUASI K-MEANS CLUSTERING
-  Pengelompokan Wilayah Distribusi Biji Kopi
+  K-MEANS CLUSTERING EVALUATION REPORT
+  Coffee Bean Distribution Area Grouping
 ============================================================
 
-Total Data          : 1398
-Jumlah Wilayah Distribusi : 8
-Silhouette Score          : 0.2363
-Inertia                   : 41250.30
+Total Samples               : 1678
+Number of Distribution Areas: 8
+Silhouette Score            : 0.4180
+Inertia                     : 23698.93
 
-Distribusi Data per Wilayah:
+Data Distribution per Area:
 ----------------------------------------
-  Gelap Halus        : 99 data (7.1%)
-  Cerah Pucat        : 299 data (21.4%)
-  Gelap Kasar        : 105 data (7.5%)
-  Sedang Kasar       : 158 data (11.3%)
-  Cerah Halus        : 127 data (9.1%)
-  Standar            : 285 data (20.4%)
-  Sangat Gelap       : 223 data (16.0%)
-  Cerah Seragam      : 102 data (7.3%)
+  Dark Smooth        : 193 samples (11.5%)
+  Light Pale         : 148 samples (8.8%)
+  Dark Coarse        : 268 samples (16.0%)
+  Medium Coarse      : 112 samples (6.7%)
+  Light Smooth       : 218 samples (13.0%)
+  Standard           : 132 samples (7.9%)
+  Very Dark          : 335 samples (20.0%)
+  Light Uniform      : 272 samples (16.2%)
 
 ============================================================
-  Catatan:
-  - Silhouette Score mendekati 1 = clustering sangat baik
-  - Silhouette Score mendekati 0 = cluster overlapping
-  - Silhouette Score negatif = data mungkin salah cluster
+  Metric Notes:
+  - Silhouette Score close to 1 = excellent clustering separation
+  - Silhouette Score close to 0 = overlapping clusters
+  - Negative Silhouette Score   = potential incorrect cluster assignment
 ============================================================

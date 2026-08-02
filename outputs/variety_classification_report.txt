@@ -1,34 +1,33 @@
 ============================================================
-  LAPORAN EVALUASI NAIVE BAYES CLASSIFICATION
-  Klasifikasi Wilayah Distribusi Biji Kopi
+  CLASSIFICATION MODEL EVALUATION REPORT
 ============================================================
 
-Akurasi     : 0.9843 (98.43%)
-Presisi     : 0.9847
-Recall      : 0.9843
-F1-Score    : 0.9844
+Accuracy    : 0.9530 (95.30%)
+Precision   : 0.9536
+Recall      : 0.9530
+F1-Score    : 0.9530
 
 Confusion Matrix:
-[[126   0   1]
- [  2 126   0]
- [  3   0 125]]
+[[122   1   4]
+ [  4 124   0]
+ [  6   3 119]]
 
 Classification Report:
               precision    recall  f1-score   support
 
-     arabika       0.96      0.99      0.98       127
-    liberika       1.00      0.98      0.99       128
-     robusta       0.99      0.98      0.98       128
+     Arabica       0.92      0.96      0.94       127
+    Liberica       0.97      0.97      0.97       128
+     Robusta       0.97      0.93      0.95       128
 
-    accuracy                           0.98       383
-   macro avg       0.98      0.98      0.98       383
-weighted avg       0.98      0.98      0.98       383
+    accuracy                           0.95       383
+   macro avg       0.95      0.95      0.95       383
+weighted avg       0.95      0.95      0.95       383
 
 
 ============================================================
-  Interpretasi Metrik:
-  - Akurasi : Seberapa sering model benar secara keseluruhan
-  - Presisi : Dari prediksi positif, berapa yang benar
-  - Recall  : Dari data positif sebenarnya, berapa yang tertangkap
-  - F1      : Harmonic mean dari Presisi dan Recall
+  Metric Interpretation:
+  - Accuracy  : Overall proportion of correct predictions
+  - Precision : Proportion of correct positive predictions
+  - Recall    : Proportion of actual positive instances correctly identified
+  - F1-Score  : Harmonic mean of Precision and Recall
 ============================================================

@@ -53,85 +53,56 @@ def normalisasi_fitur(df_fitur):
                 df_scaled.insert(idx, col, df_fitur[col].values)
 
         n_fitur_numerik = df_scaled.shape[1] - len(kolom_non_fitur)
-        print(f"[OK] Normalisasi fitur berhasil: {n_fitur_numerik} fitur numerik di-scale.")
+        print(f"[OK] Feature normalization successful: {n_fitur_numerik} numeric features scaled.")
         return df_scaled, scaler
 
     except Exception as e:
-        print(f"[ERROR] Gagal normalisasi fitur: {e}")
+        print(f"[ERROR] Failed to normalize features: {e}")
         return None, None
 
 
 def hapus_outlier(df_scaled, threshold_z=3.5):
     """
-    Menghapus data outlier berdasarkan Z-score.
-    Data dengan |z-score| > threshold di kolom fitur manapun akan dibuang.
-
-    Parameter:
-        df_scaled (pd.DataFrame): DataFrame fitur yang sudah di-scale.
-        threshold_z (float): Batas Z-score untuk deteksi outlier.
-
-    Return:
-        pd.DataFrame: DataFrame tanpa outlier.
+    Removes outlier data based on Z-score.
     """
     kolom_non_fitur = ['nama_file', 'jenis_kopi']
     kolom_fitur = [c for c in df_scaled.columns if c not in kolom_non_fitur]
     data_num = df_scaled[kolom_fitur].values
 
-    # Hitung Z-score absolut untuk setiap fitur
-    z_scores = np.abs(data_num)  # Data sudah di-scale (mean=0, std=1)
+    z_scores = np.abs(data_num)
 
-    # Mask: True jika data BUKAN outlier
     mask = (z_scores <= threshold_z).all(axis=1)
     n_outlier = (~mask).sum()
     df_bersih = df_scaled[mask].reset_index(drop=True)
 
-    print(f"[OK] Deteksi outlier: {n_outlier} data outlier dibuang (threshold z={threshold_z}).")
-    print(f"     Data tersisa: {len(df_bersih)} dari {len(df_scaled)}.")
+    print(f"[OK] Outlier detection: {n_outlier} outlier samples removed (threshold z={threshold_z}).")
+    print(f"     Remaining data: {len(df_bersih)} out of {len(df_scaled)}.")
 
     return df_bersih
 
 
 def simpan_scaler(scaler, path_output=None):
     """
-    Menyimpan objek StandardScaler ke file.
-
-    Parameter:
-        scaler (StandardScaler): Objek scaler yang sudah fit.
-        path_output (str): Path file output (default dari config).
+    Saves StandardScaler object to a file.
     """
     if path_output is None:
         path_output = config.SCALER_PATH
     try:
         joblib.dump(scaler, path_output)
-        print(f"[OK] Scaler berhasil disimpan ke: {path_output}")
+        print(f"[OK] Scaler saved successfully to: {path_output}")
     except Exception as e:
-        print(f"[ERROR] Gagal menyimpan scaler: {e}")
+        print(f"[ERROR] Failed to save scaler: {e}")
 
 
 def elbow_method(df_scaled, k_min=None, k_max=None):
     """
-    Menjalankan K-Means untuk berbagai nilai K dan menghitung inertia
-    untuk menentukan jumlah cluster optimal dengan Elbow Method.
-
-    Parameter:
-        df_scaled (pd.DataFrame): DataFrame fitur yang sudah di-scale.
-        k_min (int): Nilai K minimum (default dari config).
-        k_max (int): Nilai K maksimum (default dari config).
-
-    Return:
-        dict: {
-            'nilai_k': list[int],
-            'inertia': list[float],
-            'silhouette_scores': list[float],
-            'k_optimal': int
-        }
+    Executes K-Means for various K values and calculates inertia to determine optimal K.
     """
     if k_min is None:
         k_min = config.K_MIN
     if k_max is None:
         k_max = config.K_MAX
 
-    # Ambil hanya kolom numerik (buang nama_file dan jenis_kopi)
     kolom_non_fitur = ['nama_file', 'jenis_kopi']
     kolom_fitur = [c for c in df_scaled.columns if c not in kolom_non_fitur]
     X = df_scaled[kolom_fitur].values
@@ -140,7 +111,13 @@ def elbow_method(df_scaled, k_min=None, k_max=None):
     inertia_list = []
     silhouette_scores = []
 
-    print(f"[INFO] Menjalankan Elbow Method untuk K = {k_min} sampai {k_max}...")
+    if config.OPTIMAL_K is not None:
+        k_optimal = config.OPTIMAL_K
+        print(f"[INFO] OPTIMAL_K is set in config: K = {k_optimal}")
+        print(f"[INFO] Running Elbow Method for K = {k_min} to {k_max} (for visualization)...")
+    else:
+        k_optimal = None
+        print(f"[INFO] Running Elbow Method for K = {k_min} to {k_max}...")
 
     for k in nilai_k:
         model_km = KMeans(
@@ -156,15 +133,19 @@ def elbow_method(df_scaled, k_min=None, k_max=None):
         silhouette_scores.append(sil_score)
         print(f"     K={k:2d} | Inertia={model_km.inertia_:.2f} | Silhouette={sil_score:.4f}")
 
-    # Tentukan K optimal berdasarkan Silhouette Score tertinggi,
-    # TAPI tolak K yang menghasilkan cluster terlalu kecil (< 5% dari total data)
-    X = df_scaled[[c for c in df_scaled.columns if c not in ['nama_file', 'jenis_kopi']]].values
+    if k_optimal is not None:
+        print(f"[OK] Using fixed K = {k_optimal} (from config)")
+        return {
+            'nilai_k': nilai_k,
+            'inertia': inertia_list,
+            'silhouette_scores': silhouette_scores,
+            'k_optimal': k_optimal,
+        }
+
     n_total = len(X)
-    k_optimal = None
     best_score = -1
 
     for idx, k in enumerate(nilai_k):
-        # Quick check: jalankan KMeans dan cek distribusi cluster
         km_check = KMeans(
             n_clusters=k, max_iter=config.KMEANS_MAX_ITER,
             n_init=config.KMEANS_N_INIT, random_state=config.RANDOM_STATE
@@ -173,21 +154,19 @@ def elbow_method(df_scaled, k_min=None, k_max=None):
         _, counts = np.unique(labels_check, return_counts=True)
         min_cluster_pct = (counts.min() / n_total) * 100
 
-        # Tolak jika cluster terkecil < 5% dari total data
         if min_cluster_pct < 5.0:
-            print(f"     -> K={k} ditolak: cluster terkecil hanya {min_cluster_pct:.1f}%")
+            print(f"     -> K={k} rejected: smallest cluster is only {min_cluster_pct:.1f}%")
             continue
 
         if silhouette_scores[idx] > best_score:
             best_score = silhouette_scores[idx]
             k_optimal = k
 
-    # Fallback: jika semua K ditolak, gunakan K=3 (default jumlah kelas alami)
     if k_optimal is None:
-        k_optimal = min(3, len(nilai_k))
-        print(f"[INFO] Semua K menghasilkan cluster tidak seimbang, fallback ke K={k_optimal}")
+        k_optimal = 3
+        print(f"[INFO] All K produced imbalanced clusters, fallback to K={k_optimal}")
     else:
-        print(f"[OK] K optimal berdasarkan Silhouette Score (cluster seimbang): K = {k_optimal}")
+        print(f"[OK] Optimal K based on Silhouette Score: K = {k_optimal}")
 
     return {
         'nilai_k': nilai_k,
@@ -199,26 +178,17 @@ def elbow_method(df_scaled, k_min=None, k_max=None):
 
 def training_kmeans(df_scaled, n_clusters=None):
     """
-    Melatih model K-Means dengan jumlah cluster yang ditentukan.
-
-    Parameter:
-        df_scaled (pd.DataFrame): DataFrame fitur yang sudah di-scale.
-        n_clusters (int): Jumlah cluster K (default: K optimal dari config atau 3).
-
-    Return:
-        tuple: (model: KMeans, label_cluster: np.ndarray, inertia: float, sil_score: float)
+    Trains K-Means model with specified number of clusters.
     """
     if n_clusters is None:
         n_clusters = config.OPTIMAL_K if config.OPTIMAL_K else 3
 
-    # Ambil hanya kolom numerik (buang nama_file dan jenis_kopi)
     kolom_non_fitur = ['nama_file', 'jenis_kopi']
     kolom_fitur = [c for c in df_scaled.columns if c not in kolom_non_fitur]
     X = df_scaled[kolom_fitur].values
 
-    print(f"[INFO] Melatih K-Means dengan K={n_clusters} cluster...")
+    print(f"[INFO] Training K-Means with K={n_clusters} clusters...")
 
-    # Inisialisasi dan training model K-Means
     model = KMeans(
         n_clusters=n_clusters,
         max_iter=config.KMEANS_MAX_ITER,
@@ -230,80 +200,61 @@ def training_kmeans(df_scaled, n_clusters=None):
     label_cluster = model.labels_
     inertia = model.inertia_
 
-    # Hitung Silhouette Score
     sil_score = silhouette_score(X, label_cluster)
 
-    # Tampilkan distribusi cluster
     unique, counts = np.unique(label_cluster, return_counts=True)
-    print(f"[OK] Training K-Means selesai.")
+    print(f"[OK] K-Means training complete.")
     print(f"     Inertia           : {inertia:.2f}")
     print(f"     Silhouette Score  : {sil_score:.4f}")
-    print(f"     Distribusi wilayah:")
+    print(f"     Area Distribution :")
     for u, c in zip(unique, counts):
         nama = config.get_cluster_name(u)
-        print(f"       {nama:<16}: {c} data")
+        print(f"       {nama:<16}: {c} samples")
 
     return model, label_cluster, inertia, sil_score
 
 
 def simpan_model_kmeans(model, path_output=None):
     """
-    Menyimpan model K-Means ke file .pkl.
-
-    Parameter:
-        model (KMeans): Model K-Means yang sudah ditraining.
-        path_output (str): Path file output (default dari config).
+    Saves K-Means model to a .pkl file.
     """
     if path_output is None:
         path_output = config.KMEANS_MODEL_PATH
     try:
         joblib.dump(model, path_output)
-        print(f"[OK] Model K-Means berhasil disimpan ke: {path_output}")
+        print(f"[OK] K-Means model saved to: {path_output}")
     except Exception as e:
-        print(f"[ERROR] Gagal menyimpan model K-Means: {e}")
+        print(f"[ERROR] Failed to save K-Means model: {e}")
 
 
 def buat_dataset_berlabel(df_scaled, label_cluster):
     """
-    Menambahkan label cluster ke DataFrame fitur dan menyimpannya.
-
-    Parameter:
-        df_scaled (pd.DataFrame): DataFrame fitur yang sudah di-scale.
-        label_cluster (np.ndarray): Array label cluster per data.
-
-    Return:
-        pd.DataFrame: DataFrame dengan kolom 'cluster_label' tambahan.
+    Appends cluster labels to features DataFrame and saves it.
     """
     df_labeled = df_scaled.copy()
     df_labeled['cluster_label'] = label_cluster
 
     try:
         df_labeled.to_csv(config.LABELED_DATASET_CSV, index=False)
-        print(f"[OK] Dataset berlabel berhasil disimpan ke: {config.LABELED_DATASET_CSV}")
+        print(f"[OK] Labeled dataset saved to: {config.LABELED_DATASET_CSV}")
     except Exception as e:
-        print(f"[ERROR] Gagal menyimpan dataset berlabel: {e}")
+        print(f"[ERROR] Failed to save labeled dataset: {e}")
 
     return df_labeled
 
 
 def muat_model_kmeans(path_model=None):
     """
-    Memuat model K-Means dari file .pkl.
-
-    Parameter:
-        path_model (str): Path file model (default dari config).
-
-    Return:
-        KMeans atau None: Model K-Means jika berhasil dimuat.
+    Loads K-Means model from a .pkl file.
     """
     if path_model is None:
         path_model = config.KMEANS_MODEL_PATH
     try:
         model = joblib.load(path_model)
-        print(f"[OK] Model K-Means berhasil dimuat dari: {path_model}")
+        print(f"[OK] K-Means model loaded from: {path_model}")
         return model
     except Exception as e:
-        print(f"[ERROR] Gagal memuat model K-Means: {e}")
+        print(f"[ERROR] Failed to load K-Means model: {e}")
         return None
 
 

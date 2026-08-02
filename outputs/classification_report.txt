@@ -1,44 +1,43 @@
 ============================================================
-  LAPORAN EVALUASI NAIVE BAYES CLASSIFICATION
-  Klasifikasi Wilayah Distribusi Biji Kopi
+  CLASSIFICATION MODEL EVALUATION REPORT
 ============================================================
 
-Akurasi     : 0.9786 (97.86%)
-Presisi     : 0.9788
-Recall      : 0.9786
-F1-Score    : 0.9786
+Accuracy    : 0.9881 (98.81%)
+Precision   : 0.9885
+Recall      : 0.9881
+F1-Score    : 0.9881
 
 Confusion Matrix:
-[[20  0  0  0  0  0  0  0]
- [ 0 59  0  0  0  1  0  0]
- [ 0  0 21  0  0  0  0  0]
- [ 0  0  0 30  0  2  0  0]
- [ 0  0  0  0 24  0  1  0]
- [ 0  0  0  2  0 55  0  0]
- [ 0  0  0  0  0  0 45  0]
- [ 0  0  0  0  0  0  0 20]]
+[[39  0  0  0  0  0  0  0]
+ [ 0 29  0  0  1  0  0  0]
+ [ 0  0 54  0  0  0  0  0]
+ [ 0  0  0 22  0  0  0  0]
+ [ 0  3  0  0 41  0  0  0]
+ [ 0  0  0  0  0 26  0  0]
+ [ 0  0  0  0  0  0 67  0]
+ [ 0  0  0  0  0  0  0 54]]
 
 Classification Report:
                precision    recall  f1-score   support
 
-  Gelap Halus       1.00      1.00      1.00        20
-  Cerah Pucat       1.00      0.98      0.99        60
-  Gelap Kasar       1.00      1.00      1.00        21
- Sedang Kasar       0.94      0.94      0.94        32
-  Cerah Halus       1.00      0.96      0.98        25
-      Standar       0.95      0.96      0.96        57
- Sangat Gelap       0.98      1.00      0.99        45
-Cerah Seragam       1.00      1.00      1.00        20
+  Dark Smooth       1.00      1.00      1.00        39
+   Light Pale       0.91      0.97      0.94        30
+  Dark Coarse       1.00      1.00      1.00        54
+Medium Coarse       1.00      1.00      1.00        22
+ Light Smooth       0.98      0.93      0.95        44
+     Standard       1.00      1.00      1.00        26
+    Very Dark       1.00      1.00      1.00        67
+Light Uniform       1.00      1.00      1.00        54
 
-     accuracy                           0.98       280
-    macro avg       0.98      0.98      0.98       280
- weighted avg       0.98      0.98      0.98       280
+     accuracy                           0.99       336
+    macro avg       0.99      0.99      0.99       336
+ weighted avg       0.99      0.99      0.99       336
 
 
 ============================================================
-  Interpretasi Metrik:
-  - Akurasi : Seberapa sering model benar secara keseluruhan
-  - Presisi : Dari prediksi positif, berapa yang benar
-  - Recall  : Dari data positif sebenarnya, berapa yang tertangkap
-  - F1      : Harmonic mean dari Presisi dan Recall
+  Metric Interpretation:
+  - Accuracy  : Overall proportion of correct predictions
+  - Precision : Proportion of correct positive predictions
+  - Recall    : Proportion of actual positive instances correctly identified
+  - F1-Score  : Harmonic mean of Precision and Recall
 ============================================================

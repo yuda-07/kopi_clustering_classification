@@ -47,63 +47,45 @@ def siapkan_data_training(df_fitur, kolom_label='cluster_label'):
         label_encoder = LabelEncoder()
         y_encoded = label_encoder.fit_transform(y)
 
-        print(f"[OK] Data training disiapkan: X={X.shape}, y={y_encoded.shape}")
-        print(f"     Kelas unik: {label_encoder.classes_}")
-        print(f"     Jumlah fitur: {len(nama_fitur)}")
+        print(f"[OK] Training data prepared: X={X.shape}, y={y_encoded.shape}")
+        print(f"     Unique classes: {label_encoder.classes_}")
+        print(f"     Number of features: {len(nama_fitur)}")
 
         return X, y_encoded, nama_fitur, label_encoder
 
     except Exception as e:
-        print(f"[ERROR] Gagal menyiapkan data training: {e}")
+        print(f"[ERROR] Failed to prepare training data: {e}")
         return None, None, None, None
 
 
 def training_naive_bayes(X, y, test_size=None, random_state=None):
     """
-    Melakukan training model Gaussian Naive Bayes.
-
-    Parameter:
-        X (np.ndarray): Data fitur.
-        y (np.ndarray): Label kelas (encoded).
-        test_size (float): Rasio data test (default dari config).
-        random_state (int): Random state (default dari config).
-
-    Return:
-        dict: {
-            'model': GaussianNB,
-            'X_train': np.ndarray, 'X_test': np.ndarray,
-            'y_train': np.ndarray, 'y_test': np.ndarray,
-            'y_pred': np.ndarray
-        }
+    Trains Gaussian Naive Bayes model.
     """
     if test_size is None:
         test_size = config.TEST_SIZE
     if random_state is None:
         random_state = config.RANDOM_STATE
 
-    print(f"[INFO] Split data: {int((1-test_size)*100)}% train, {int(test_size*100)}% test")
+    print(f"[INFO] Data split: {int((1-test_size)*100)}% train, {int(test_size*100)}% test")
 
-    # Split data train dan test (dengan fallback jika stratified gagal)
     try:
         X_train, X_test, y_train, y_test = train_test_split(
             X, y, test_size=test_size, random_state=random_state, stratify=y
         )
     except ValueError:
-        # Fallback: jika ada kelas dengan terlalu sedikit anggota, split tanpa stratify
-        print("[INFO] Stratified split gagal (kelas terlalu sedikit), menggunakan split biasa.")
+        print("[INFO] Stratified split failed, using regular split.")
         X_train, X_test, y_train, y_test = train_test_split(
             X, y, test_size=test_size, random_state=random_state
         )
 
-    print(f"     Data train: {X_train.shape[0]} sampel")
-    print(f"     Data test : {X_test.shape[0]} sampel")
+    print(f"     Train samples: {X_train.shape[0]}")
+    print(f"     Test samples : {X_test.shape[0]}")
 
-    # Inisialisasi dan training Gaussian Naive Bayes
     model = GaussianNB()
     model.fit(X_train, y_train)
-    print("[OK] Training Gaussian Naive Bayes selesai.")
+    print("[OK] Gaussian Naive Bayes training complete.")
 
-    # Prediksi pada data test
     y_pred = model.predict(X_test)
 
     return {
@@ -118,46 +100,27 @@ def training_naive_bayes(X, y, test_size=None, random_state=None):
 
 def training_random_forest(X, y, scaler=None, feature_names=None, save_scaler_path=None, test_size=None, random_state=None, n_estimators=100):
     """
-    Melakukan training model Random Forest.
-
-    Parameter:
-        X (np.ndarray): Data fitur.
-        y (np.ndarray): Label kelas (encoded).
-        scaler (StandardScaler, optional): Scaler yang sudah fit.
-        feature_names (list, optional): List nama fitur urut sesuai kolom X.
-        save_scaler_path (str, optional): Path untuk menyimpan scaler.
-        test_size (float): Rasio data test (default dari config).
-        random_state (int): Random state (default dari config).
-        n_estimators (int): Jumlah pohon dalam Random Forest.
-
-    Return:
-        dict: {
-            'model': RandomForestClassifier,
-            'scaler': StandardScaler,
-            'X_train': np.ndarray, 'X_test': np.ndarray,
-            'y_train': np.ndarray, 'y_test': np.ndarray,
-            'y_pred': np.ndarray
-        }
+    Trains Random Forest model.
     """
     if test_size is None:
         test_size = config.TEST_SIZE
     if random_state is None:
         random_state = config.RANDOM_STATE
 
-    print(f"[INFO] Split data: {int((1-test_size)*100)}% train, {int(test_size*100)}% test")
+    print(f"[INFO] Data split: {int((1-test_size)*100)}% train, {int(test_size*100)}% test")
 
     try:
         X_train, X_test, y_train, y_test = train_test_split(
             X, y, test_size=test_size, random_state=random_state, stratify=y
         )
     except ValueError:
-        print("[INFO] Stratified split gagal (kelas terlalu sedikit), menggunakan split biasa.")
+        print("[INFO] Stratified split failed, using regular split.")
         X_train, X_test, y_train, y_test = train_test_split(
             X, y, test_size=test_size, random_state=random_state
         )
 
-    print(f"     Data train: {X_train.shape[0]} sampel")
-    print(f"     Data test : {X_test.shape[0]} sampel")
+    print(f"     Train samples: {X_train.shape[0]}")
+    print(f"     Test samples : {X_test.shape[0]}")
 
     if scaler is None:
         scaler = StandardScaler()
@@ -173,16 +136,20 @@ def training_random_forest(X, y, scaler=None, feature_names=None, save_scaler_pa
         except Exception:
             pass
 
-    model = RandomForestClassifier(n_estimators=n_estimators, random_state=random_state)
+    model = RandomForestClassifier(
+        n_estimators=n_estimators if n_estimators != 200 else 300,
+        class_weight='balanced',
+        random_state=random_state
+    )
     model.fit(X_train_scaled, y_train)
-    print("[OK] Training Random Forest selesai.")
+    print("[OK] Random Forest training complete.")
 
     if save_scaler_path is not None:
         try:
             joblib.dump(scaler, save_scaler_path)
-            print(f"[OK] Scaler Random Forest disimpan ke: {save_scaler_path}")
+            print(f"[OK] Random Forest scaler saved to: {save_scaler_path}")
         except Exception as e:
-            print(f"[ERROR] Gagal menyimpan scaler Random Forest: {e}")
+            print(f"[ERROR] Failed to save Random Forest scaler: {e}")
 
     y_pred = model.predict(X_test_scaled)
 
@@ -199,17 +166,8 @@ def training_random_forest(X, y, scaler=None, feature_names=None, save_scaler_pa
 
 def evaluasi_model(y_test, y_pred, label_encoder=None):
     """
-    Mengevaluasi performa model Naive Bayes.
-
-    Parameter:
-        y_test (np.ndarray): Label sebenarnya.
-        y_pred (np.ndarray): Label prediksi.
-        label_encoder (LabelEncoder): Encoder untuk konversi balik label.
-
-    Return:
-        dict: Hasil evaluasi (akurasi, precision, recall, f1).
+    Evaluates classification model performance.
     """
-    # Hitung metrik evaluasi
     akurasi = accuracy_score(y_test, y_pred)
     presisi = precision_score(y_test, y_pred, average='weighted', zero_division=0)
     recall = recall_score(y_test, y_pred, average='weighted', zero_division=0)
@@ -222,12 +180,11 @@ def evaluasi_model(y_test, y_pred, label_encoder=None):
         'f1_score': f1,
     }
 
-    # Tampilkan hasil evaluasi
     print("=" * 40)
-    print("  HASIL EVALUASI NAIVE BAYES")
+    print("  MODEL EVALUATION RESULTS")
     print("=" * 40)
-    print(f"  Akurasi   : {akurasi:.4f} ({akurasi*100:.2f}%)")
-    print(f"  Presisi   : {presisi:.4f}")
+    print(f"  Accuracy  : {akurasi:.4f} ({akurasi*100:.2f}%)")
+    print(f"  Precision : {presisi:.4f}")
     print(f"  Recall    : {recall:.4f}")
     print(f"  F1-Score  : {f1:.4f}")
     print("=" * 40)
@@ -237,61 +194,42 @@ def evaluasi_model(y_test, y_pred, label_encoder=None):
 
 def prediksi_baru(model, scaler, fitur_baru):
     """
-    Melakukan prediksi pada data baru (di luar dataset training).
-
-    Parameter:
-        model (GaussianNB): Model Naive Bayes yang sudah ditraining.
-        scaler (StandardScaler): Scaler yang digunakan saat training.
-        fitur_baru (np.ndarray): Fitur data baru (belum di-scale).
-
-    Return:
-        int: Label kelas hasil prediksi (encoded).
+    Makes predictions on new data.
     """
     try:
-        # Normalisasi data baru menggunakan scaler yang sama
         fitur_scaled = scaler.transform(fitur_baru.reshape(1, -1))
         prediksi = model.predict(fitur_scaled)
         return prediksi[0]
     except Exception as e:
-        print(f"[ERROR] Gagal melakukan prediksi: {e}")
+        print(f"[ERROR] Prediction failed: {e}")
         return None
 
 
 def simpan_model_nb(model, path_output=None):
     """
-    Menyimpan model Naive Bayes ke file .pkl.
-
-    Parameter:
-        model (GaussianNB): Model yang sudah ditraining.
-        path_output (str): Path file output (default dari config).
+    Saves model to a .pkl file.
     """
     if path_output is None:
         path_output = config.NAIVE_BAYES_MODEL_PATH
     try:
         joblib.dump(model, path_output)
-        print(f"[OK] Model Naive Bayes berhasil disimpan ke: {path_output}")
+        print(f"[OK] Classifier model saved to: {path_output}")
     except Exception as e:
-        print(f"[ERROR] Gagal menyimpan model Naive Bayes: {e}")
+        print(f"[ERROR] Failed to save classifier model: {e}")
 
 
 def muat_model_nb(path_model=None):
     """
-    Memuat model Naive Bayes dari file .pkl.
-
-    Parameter:
-        path_model (str): Path file model (default dari config).
-
-    Return:
-        GaussianNB atau None: Model Naive Bayes jika berhasil dimuat.
+    Loads model from a .pkl file.
     """
     if path_model is None:
         path_model = config.NAIVE_BAYES_MODEL_PATH
     try:
         model = joblib.load(path_model)
-        print(f"[OK] Model Naive Bayes berhasil dimuat dari: {path_model}")
+        print(f"[OK] Classifier model loaded from: {path_model}")
         return model
     except Exception as e:
-        print(f"[ERROR] Gagal memuat model Naive Bayes: {e}")
+        print(f"[ERROR] Failed to load classifier model: {e}")
         return None
 
 

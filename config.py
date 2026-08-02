@@ -1,54 +1,54 @@
 """
-config.py - Konfigurasi Global Proyek
-======================================
-Menyimpan semua parameter, path file, dan konstanta yang digunakan
-di seluruh pipeline proyek ini.
+config.py - Global Project Configuration
+==========================================
+Stores all parameters, file paths, and constants used
+throughout the entire project pipeline.
 """
 
 import os
 
 # ============================================================
-# PATH DASAR PROYEK
+# BASE PROJECT PATH
 # ============================================================
-# Ambil path root proyek secara otomatis berdasarkan lokasi config.py
+# Automatically get the project root path based on config.py location
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
 # ============================================================
-# PATH DATASET
+# DATASET PATHS
 # ============================================================
-# Folder dataset mentah (gambar biji kopi + CSV metadata)
+# Raw dataset folder (coffee bean images + CSV metadata)
 RAW_DATA_DIR = os.path.join(BASE_DIR, "dataset", "raw")
 COFFEE_IMAGES_DIR = os.path.join(RAW_DATA_DIR, "coffee_images")
 COFFEE_QUALITY_CSV = os.path.join(RAW_DATA_DIR, "coffee_quality.csv")
 DISTRIBUTION_REGION_CSV = os.path.join(RAW_DATA_DIR, "distribution_region.csv")
 
-# Folder dataset hasil olahan (fitur & label)
+# Processed dataset folder (features & labels)
 PROCESSED_DATA_DIR = os.path.join(BASE_DIR, "dataset", "processed")
 FEATURES_EXTRACTED_CSV = os.path.join(PROCESSED_DATA_DIR, "features_extracted.csv")
 FEATURES_SCALED_CSV = os.path.join(PROCESSED_DATA_DIR, "features_scaled.csv")
 LABELED_DATASET_CSV = os.path.join(PROCESSED_DATA_DIR, "labeled_dataset.csv")
 
 # ============================================================
-# PATH MODEL
+# MODEL PATHS
 # ============================================================
-# Folder penyimpanan model yang sudah ditraining
+# Folder for storing trained models
 MODELS_DIR = os.path.join(BASE_DIR, "models")
 KMEANS_MODEL_PATH = os.path.join(MODELS_DIR, "kmeans_model.pkl")
 NAIVE_BAYES_MODEL_PATH = os.path.join(MODELS_DIR, "naive_bayes_model.pkl")
 SCALER_PATH = os.path.join(MODELS_DIR, "scaler.pkl")
 
-# Path model untuk klasifikasi jenis kopi (Arabika, Liberika, Robusta)
+# Model paths for coffee bean variety classification (Arabica, Liberica, Robusta)
 VARIETY_MODEL_PATH = os.path.join(MODELS_DIR, "variety_classifier_model.pkl")
 VARIETY_LABEL_ENCODER_PATH = os.path.join(MODELS_DIR, "variety_label_encoder.pkl")
 VARIETY_SCALER_PATH = os.path.join(MODELS_DIR, "variety_scaler.pkl")
 
 # ============================================================
-# PATH OUTPUT & VISUALISASI
+# OUTPUT & VISUALIZATION PATHS
 # ============================================================
 OUTPUTS_DIR = os.path.join(BASE_DIR, "outputs")
 PLOTS_DIR = os.path.join(OUTPUTS_DIR, "plots")
 
-# File output visualisasi - plot utama
+# Main visualization output files
 ELBOW_CURVE_PATH = os.path.join(PLOTS_DIR, "elbow_curve.png")
 CLUSTER_MAP_PATH = os.path.join(PLOTS_DIR, "cluster_map.png")
 CONFUSION_MATRIX_PATH = os.path.join(PLOTS_DIR, "confusion_matrix.png")
@@ -56,11 +56,11 @@ FEATURE_DISTRIBUTION_PATH = os.path.join(PLOTS_DIR, "feature_distribution.png")
 SAMPLE_IMAGES_PATH = os.path.join(PLOTS_DIR, "sample_images.png")
 SILHOUETTE_PER_K_PATH = os.path.join(PLOTS_DIR, "silhouette_scores.png")
 
-# File output visualisasi - plot jenis kopi asli (BARU)
+# Variety classification visualization output files
 VARIETY_CONFUSION_MATRIX_PATH = os.path.join(PLOTS_DIR, "variety_confusion_matrix.png")
 VARIETY_PER_CLASS_PATH = os.path.join(PLOTS_DIR, "variety_per_class_metrics.png")
 
-# File output visualisasi - plot statistik tambahan (BARU)
+# Additional statistical plot output files
 PCA_SCATTER_PATH = os.path.join(PLOTS_DIR, "pca_scatter_2d.png")
 CORRELATION_HEATMAP_PATH = os.path.join(PLOTS_DIR, "correlation_heatmap.png")
 SILHOUETTE_ANALYSIS_PATH = os.path.join(PLOTS_DIR, "silhouette_analysis.png")
@@ -71,96 +71,98 @@ PAIR_PLOT_PATH = os.path.join(PLOTS_DIR, "pair_plot_top_features.png")
 METRIC_COMPARISON_PATH = os.path.join(PLOTS_DIR, "metric_comparison.png")
 CLASSIFICATION_PER_CLASS_PATH = os.path.join(PLOTS_DIR, "classification_per_class_metrics.png")
 
-# Konfigurasi tampilan visualisasi
-SHOW_PLOTS = True  # True = tampilkan popup, False = hanya simpan PNG
+# Visualization display configuration
+SHOW_PLOTS = True  # True = show popup window, False = save PNG only
 
-# File output laporan
+# Report output files
 CLUSTERING_REPORT_PATH = os.path.join(OUTPUTS_DIR, "clustering_report.txt")
 CLASSIFICATION_REPORT_PATH = os.path.join(OUTPUTS_DIR, "classification_report.txt")
 VARIETY_CLASSIFICATION_REPORT_PATH = os.path.join(OUTPUTS_DIR, "variety_classification_report.txt")
 PREDICTIONS_EXCEL_PATH = os.path.join(OUTPUTS_DIR, "predictions.xlsx")
 
 # ============================================================
-# PARAMETER PREPROCESSING GAMBAR
+# IMAGE PREPROCESSING PARAMETERS
 # ============================================================
-# Ukuran resize gambar (piksel)
+# Image resize target (pixels)
 IMG_SIZE = 128
 
-# Kernel Gaussian Blur untuk noise removal
+# Gaussian Blur kernel size for noise removal
 BLUR_KERNEL_SIZE = (5, 5)
 
 # ============================================================
-# PARAMETER EKSTRAKSI FITUR
+# FEATURE EXTRACTION PARAMETERS
 # ============================================================
-# Jumlah bin histogram per channel warna
+# Number of histogram bins per color channel
 HISTOGRAM_BINS = 32
 
 # ============================================================
-# PARAMETER K-MEANS CLUSTERING
+# K-MEANS CLUSTERING PARAMETERS
 # ============================================================
-# Rentang nilai K untuk Elbow Method (K=2 sampai K_MAX)
+# K value range for Elbow Method (K=2 to K_MAX)
 K_MIN = 2
 K_MAX = 10
 
-# Jumlah iterasi maksimum K-Means
+# Maximum iterations for K-Means
 KMEANS_MAX_ITER = 300
 
-# Jumlah inisialisasi K-Means (n_init)
+# Number of K-Means initializations (n_init)
 KMEANS_N_INIT = 10
 
-# Jumlah cluster optimal (akan di-override oleh Elbow Method jika None)
-OPTIMAL_K = None
+# Optimal number of clusters (8 clusters as per research abstract)
+OPTIMAL_K = 8
 
 # ============================================================
-# PARAMETER NAIVE BAYES CLASSIFICATION
+# NAIVE BAYES CLASSIFICATION PARAMETERS
 # ============================================================
-# Rasio pembagian data train/test
+# Train/test split ratio
 TEST_SIZE = 0.2
 
 # ============================================================
-# PARAMETER UMUM
+# GENERAL PARAMETERS
 # ============================================================
-# Random state untuk semua operasi acak (reproduktibilitas)
+# Random state for all random operations (reproducibility)
 RANDOM_STATE = 42
 
-# Daftar jenis biji kopi (label kelas berdasarkan folder dataset)
+# List of coffee bean varieties (class labels based on dataset folders)
 GRADE_LABELS = ["arabika", "liberika", "robusta"]
 
 # ============================================================
-# MAPPING NAMA CLUSTER (pengganti "Cluster 0", "Cluster 1", ...)
-# Nama-nama ini lebih deskriptif berdasarkan karakteristik visual
+# CLUSTER NAME MAPPING (replaces "Cluster 0", "Cluster 1", ...)
+# 8 distribution area clusters based on visual characteristics (per research abstract)
+# Names reflect the visual/textural properties of each group
 # ============================================================
 CLUSTER_NAME_MAP = {
-    0: "Gelap Halus",
-    1: "Cerah Pucat",
-    2: "Gelap Kasar",
-    3: "Sedang Kasar",
-    4: "Cerah Halus",
-    5: "Standar",
-    6: "Sangat Gelap",
-    7: "Cerah Seragam"
+    0: "Dark Smooth",
+    1: "Light Pale",
+    2: "Dark Coarse",
+    3: "Medium Coarse",
+    4: "Light Smooth",
+    5: "Standard",
+    6: "Very Dark",
+    7: "Light Uniform"
 }
 
 
 def get_cluster_name(cluster_id):
-    """Mengembalikan nama deskriptif untuk cluster ID."""
+    """Returns a descriptive name for the given cluster ID."""
     return CLUSTER_NAME_MAP.get(cluster_id, f"Cluster {cluster_id}")
 
 
 def get_cluster_names_list(cluster_ids):
-    """Mengembalikan list nama deskriptif sesuai urutan cluster_ids."""
+    """Returns a list of descriptive names in the order of cluster_ids."""
     return [get_cluster_name(cid) for cid in cluster_ids]
 
-# Format file gambar yang didukung
+
+# Supported image file extensions
 IMAGE_EXTENSIONS = [".jpg", ".jpeg", ".png"]
 
 # ============================================================
-# FUNGSI BANTUAN: Pastikan semua folder penting sudah ada
+# UTILITY FUNCTION: Ensure all required directories exist
 # ============================================================
 def ensure_directories():
     """
-    Membuat semua folder yang diperlukan jika belum ada.
-    Dipanggil di awal pipeline untuk menghindari error path not found.
+    Creates all required project directories if they do not exist.
+    Called at the start of the pipeline to prevent path-not-found errors.
     """
     dirs_to_create = [
         RAW_DATA_DIR,
@@ -172,13 +174,13 @@ def ensure_directories():
     ]
     for dir_path in dirs_to_create:
         os.makedirs(dir_path, exist_ok=True)
-    print("[OK] Semua direktori proyek sudah tersedia.")
+    print("[OK] All project directories are ready.")
 
 
-# Jalankan otomatis saat config di-import
+# Run automatically when config is imported as main
 if __name__ == "__main__":
     ensure_directories()
-    print("[INFO] Konfigurasi proyek berhasil dimuat.")
+    print("[INFO] Project configuration loaded successfully.")
     print(f"[INFO] Base Dir : {BASE_DIR}")
     print(f"[INFO] Images  : {COFFEE_IMAGES_DIR}")
     print(f"[INFO] Models  : {MODELS_DIR}")

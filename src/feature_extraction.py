@@ -4,7 +4,7 @@ feature_extraction.py - Modul Ekstraksi Fitur
 Mengekstrak fitur dari gambar biji kopi yang sudah dipreprocessing:
 - Statistik warna: mean & std tiap channel R, G, B dan H, S, V
 - Histogram warna (32 bin per channel)
-- Fitur tekstur GLCM: kontras, energi, homogenitas, dissimilarity
+- Fitur tekstur GLCM: kontras, korelasi, energi, homogenitas
 
 Return: DataFrame fitur per gambar
 """
@@ -19,38 +19,44 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import config
 
 
-def ekstraksi_fitur_warna(rgb_norm, hsv_norm):
+def ekstraksi_fitur_warna(rgb_norm, hsv_norm, mask=None):
     """
-    Menghitung mean dan standar deviasi untuk setiap channel warna RGB dan HSV.
+    Menghitung mean dan standar deviasi untuk setiap channel warna RGB dan HSV
+    hanya pada piksel objek biji kopi (jika mask disediakan).
 
     Parameter:
         rgb_norm (np.ndarray): Gambar RGB ternormalisasi (H, W, 3).
         hsv_norm (np.ndarray): Gambar HSV ternormalisasi (H, W, 3).
+        mask (np.ndarray, opsional): Mask biner objek (255 = biji kopi).
 
     Return:
         dict: Fitur statistik warna (12 fitur total).
     """
     fitur = {}
+    use_mask = mask is not None and np.any(mask > 0)
 
     # Fitur RGB: mean dan std per channel
     for i, channel in enumerate(['R', 'G', 'B']):
-        fitur[f'mean_{channel}'] = np.mean(rgb_norm[:, :, i])
-        fitur[f'std_{channel}'] = np.std(rgb_norm[:, :, i])
+        vals = rgb_norm[:, :, i][mask > 0] if use_mask else rgb_norm[:, :, i]
+        fitur[f'mean_{channel}'] = float(np.mean(vals)) if len(vals) > 0 else 0.0
+        fitur[f'std_{channel}'] = float(np.std(vals)) if len(vals) > 0 else 0.0
 
     # Fitur HSV: mean dan std per channel
     for i, channel in enumerate(['H', 'S', 'V']):
-        fitur[f'mean_{channel}'] = np.mean(hsv_norm[:, :, i])
-        fitur[f'std_{channel}'] = np.std(hsv_norm[:, :, i])
+        vals = hsv_norm[:, :, i][mask > 0] if use_mask else hsv_norm[:, :, i]
+        fitur[f'mean_{channel}'] = float(np.mean(vals)) if len(vals) > 0 else 0.0
+        fitur[f'std_{channel}'] = float(np.std(vals)) if len(vals) > 0 else 0.0
 
     return fitur
 
 
-def ekstraksi_histogram(rgb_norm, bins=None):
+def ekstraksi_histogram(rgb_norm, mask=None, bins=None):
     """
-    Menghitung histogram warna untuk setiap channel RGB.
+    Menghitung histogram warna untuk setiap channel RGB pada piksel biji kopi.
 
     Parameter:
         rgb_norm (np.ndarray): Gambar RGB ternormalisasi (H, W, 3).
+        mask (np.ndarray, opsional): Mask biner objek (255 = biji kopi).
         bins (int): Jumlah bin histogram (default dari config).
 
     Return:
@@ -60,27 +66,32 @@ def ekstraksi_histogram(rgb_norm, bins=None):
         bins = config.HISTOGRAM_BINS
 
     fitur = {}
+    use_mask = mask is not None and np.any(mask > 0)
 
     for i, channel in enumerate(['R', 'G', 'B']):
-        # Hitung histogram untuk channel ini
-        hist, _ = np.histogram(rgb_norm[:, :, i], bins=bins, range=(0, 1))
-        # Normalisasi histogram agar jumlah total = 1
-        hist = hist.astype(np.float32) / hist.sum()
+        vals = rgb_norm[:, :, i][mask > 0] if use_mask else rgb_norm[:, :, i]
+        if len(vals) > 0:
+            hist, _ = np.histogram(vals, bins=bins, range=(0, 1))
+            total_sum = hist.sum()
+            hist = (hist.astype(np.float32) / total_sum) if total_sum > 0 else hist.astype(np.float32)
+        else:
+            hist = np.zeros(bins, dtype=np.float32)
 
         # Simpan setiap bin sebagai fitur terpisah
         for j in range(bins):
-            fitur[f'hist_{channel}_bin{j:02d}'] = hist[j]
+            fitur[f'hist_{channel}_bin{j:02d}'] = float(hist[j])
 
     return fitur
 
 
-def ekstraksi_fitur_tekstur(gray_uint8):
+def ekstraksi_fitur_tekstur(gray_uint8, mask=None):
     """
-    Menghitung fitur tekstur menggunakan GLCM (Gray-Level Co-occurrence Matrix).
-    Fitur yang dihitung: kontras, energi (ASM), homogenitas, dissimilarity.
+    Menghitung fitur tekstur menggunakan GLCM (Gray-Level Co-occurrence Matrix)
+    pada Region of Interest (ROI) biji kopi.
 
     Parameter:
         gray_uint8 (np.ndarray): Gambar grayscale uint8 (0-255), 2D array.
+        mask (np.ndarray, opsional): Mask biner objek (255 = biji kopi).
 
     Return:
         dict: Fitur tekstur GLCM (4 fitur).
@@ -92,52 +103,68 @@ def ekstraksi_fitur_tekstur(gray_uint8):
         if gray_uint8.dtype != np.uint8:
             gray_uint8 = (gray_uint8 * 255).astype(np.uint8)
 
+        # Potong ROI berdasarkan mask agar GLCM hanya menghitung tekstur biji kopi
+        if mask is not None and np.any(mask > 0):
+            y_indices, x_indices = np.where(mask > 0)
+            ymin, ymax = int(np.min(y_indices)), int(np.max(y_indices))
+            xmin, xmax = int(np.min(x_indices)), int(np.max(x_indices))
+            gray_roi = gray_uint8[ymin:ymax+1, xmin:xmax+1]
+        else:
+            gray_roi = gray_uint8
+
         # Hitung GLCM dengan jarak=1, sudut=0 (horizontal)
-        # Levels=256 untuk citra 8-bit
-        glcm = graycomatrix(gray_uint8, distances=[1], angles=[0], levels=256,
+        glcm = graycomatrix(gray_roi, distances=[1], angles=[0], levels=256,
                             symmetric=True, normed=True)
 
-        # Ekstrak properti tekstur
-        fitur['kontras'] = graycoprops(glcm, 'contrast')[0, 0]
-        fitur['energi'] = graycoprops(glcm, 'energy')[0, 0]
-        fitur['homogenitas'] = graycoprops(glcm, 'homogeneity')[0, 0]
-        fitur['dissimilarity'] = graycoprops(glcm, 'dissimilarity')[0, 0]
+        fitur['kontras'] = float(graycoprops(glcm, 'contrast')[0, 0])
+        fitur['korelasi'] = float(graycoprops(glcm, 'correlation')[0, 0])
+        fitur['energi'] = float(graycoprops(glcm, 'energy')[0, 0])
+        fitur['homogenitas'] = float(graycoprops(glcm, 'homogeneity')[0, 0])
 
     except Exception as e:
         print(f"[ERROR] Gagal menghitung GLCM: {e}")
         fitur['kontras'] = 0.0
+        fitur['korelasi'] = 0.0
         fitur['energi'] = 0.0
         fitur['homogenitas'] = 0.0
-        fitur['dissimilarity'] = 0.0
 
     return fitur
 
 
 def ekstraksi_fitur_gambar(hasil_preprocessing, nama_file=""):
     """
-    Fungsi utama: mengekstrak semua fitur dari satu gambar yang sudah dipreprocessing.
+    Fungsi utama: mengekstrak semua fitur dari satu gambar yang sudah dipreprocessing & di-mask.
 
     Parameter:
         hasil_preprocessing (dict): Hasil dari image_preprocessing.preprocessing_gambar().
         nama_file (str): Nama file gambar (untuk identifikasi).
 
     Return:
-        dict: Semua fitur yang diekstrak (112+ fitur total).
+        dict: Semua fitur yang diekstrak (112 fitur total sesuai abstrak).
     """
     try:
-        # Ambil komponen gambar dari hasil preprocessing
+        # Ambil komponen gambar & mask dari hasil preprocessing
         rgb_norm = hasil_preprocessing['rgb_norm']
         hsv_norm = hasil_preprocessing['hsv_norm']
         gray = hasil_preprocessing['gray']  # uint8 untuk GLCM
+        mask = hasil_preprocessing.get('mask', None)
 
         # Kumpulkan semua fitur
         semua_fitur = {'nama_file': nama_file}
 
         # 1. Fitur statistik warna (12 fitur)
-        fitur_warna = ekstraksi_fitur_warna(rgb_norm, hsv_norm)
+        fitur_warna = ekstraksi_fitur_warna(rgb_norm, hsv_norm, mask=mask)
         semua_fitur.update(fitur_warna)
 
         # 2. Fitur histogram warna (96 fitur)
+        fitur_hist = ekstraksi_histogram(rgb_norm, mask=mask)
+        semua_fitur.update(fitur_hist)
+
+        # 3. Fitur tekstur GLCM (4 fitur)
+        fitur_tekstur = ekstraksi_fitur_tekstur(gray, mask=mask)
+        semua_fitur.update(fitur_tekstur)
+
+        return semua_fitur
         fitur_hist = ekstraksi_histogram(rgb_norm)
         semua_fitur.update(fitur_hist)
 
@@ -239,7 +266,7 @@ if __name__ == "__main__":
             jumlah_fitur = len([k for k in fitur.keys() if k != 'nama_file'])
             print(f"  Jumlah fitur diekstrak: {jumlah_fitur}")
             print(f"  Contoh fitur warna : mean_R={fitur['mean_R']:.4f}, std_G={fitur['std_G']:.4f}")
-            print(f"  Contoh fitur tekstur: kontras={fitur['kontras']:.4f}, energi={fitur['energi']:.4f}")
+            print(f"  Contoh fitur tekstur: kontras={fitur['kontras']:.4f}, korelasi={fitur['korelasi']:.4f}, energi={fitur['energi']:.4f}")
 
     print("=" * 50)
     print("Test feature_extraction selesai.")

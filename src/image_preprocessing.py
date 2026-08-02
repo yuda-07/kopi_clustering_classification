@@ -101,22 +101,97 @@ def normalisasi_piksel(gambar):
     return gambar.astype(np.float32) / 255.0
 
 
+def buat_mask_objek(gambar_bgr):
+    """
+    Membuat mask biner untuk dataset training (latar belakang putih/seragam).
+    Menggunakan Otsu Thresholding — terbukti akurat untuk dataset standar 640x640.
+    Foreground (biji kopi) = 255 (uint8), Background = 0.
+    """
+    gray = cv2.cvtColor(gambar_bgr, cv2.COLOR_BGR2GRAY)
+    blur = cv2.GaussianBlur(gray, (5, 5), 0)
+
+    h, w = gray.shape
+    area_total = h * w
+
+    # Thresholding Otsu untuk latar belakang putih
+    _, thresh_inv = cv2.threshold(blur, 0, 255, cv2.THRESH_BINARY_INV + cv2.THRESH_OTSU)
+    _, thresh_norm = cv2.threshold(blur, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
+
+    cnts_inv, _ = cv2.findContours(thresh_inv, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+    cnts_norm, _ = cv2.findContours(thresh_norm, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+
+    best_cnt = None
+    for cnts in [cnts_inv, cnts_norm]:
+        valid = [c for c in cnts if (area_total * 0.95) > cv2.contourArea(c) > (area_total * 0.01)]
+        if valid:
+            c = max(valid, key=cv2.contourArea)
+            if best_cnt is None or cv2.contourArea(c) > cv2.contourArea(best_cnt):
+                best_cnt = c
+
+    mask = np.zeros((h, w), dtype=np.uint8)
+    if best_cnt is not None:
+        cv2.drawContours(mask, [best_cnt], -1, 255, -1)
+    else:
+        margin_h, margin_w = int(h * 0.05), int(w * 0.05)
+        mask[margin_h:h-margin_h, margin_w:w-margin_w] = 255
+
+    return mask
+
+
+def buat_mask_realworld(gambar_bgr):
+    """
+    Membuat mask untuk foto real-world dari kamera HP (latar belakang lantai/meja bervariasi).
+    Menggunakan filter HSV Saturation untuk mengisolasi warna cokelat biji kopi sangrai
+    dari latar belakang netral (lantai keramik, bayangan, dll).
+    """
+    h, w = gambar_bgr.shape[:2]
+    area_total = h * w
+
+    hsv = cv2.cvtColor(gambar_bgr, cv2.COLOR_BGR2HSV)
+    s_channel = hsv[:, :, 1]
+    v_channel = hsv[:, :, 2]
+
+    # Filter: biji kopi cokelat memiliki Saturation > 20 dan Value < 190
+    mask_kopi = ((s_channel > 20) & (v_channel < 190)).astype(np.uint8) * 255
+
+    # Adaptive threshold untuk menangkap biji sangat gelap
+    gray = cv2.cvtColor(gambar_bgr, cv2.COLOR_BGR2GRAY)
+    blur = cv2.GaussianBlur(gray, (5, 5), 0)
+    thresh_local = cv2.adaptiveThreshold(blur, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
+                                         cv2.THRESH_BINARY_INV, 21, 5)
+    dark_beans = (v_channel < 140) & (s_channel > 15)
+    combined = cv2.bitwise_or(mask_kopi, thresh_local & dark_beans.astype(np.uint8) * 255)
+
+    kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (5, 5))
+    cleaned = cv2.morphologyEx(combined, cv2.MORPH_OPEN, kernel)
+    cleaned = cv2.morphologyEx(cleaned, cv2.MORPH_CLOSE, kernel)
+
+    cnts, _ = cv2.findContours(cleaned, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+    mask = np.zeros((h, w), dtype=np.uint8)
+
+    valid_cnts = [c for c in cnts if (area_total * 0.20) > cv2.contourArea(c) > (area_total * 0.0008)]
+    if valid_cnts:
+        for c in valid_cnts:
+            cv2.drawContours(mask, [c], -1, 255, -1)
+
+    # Fallback jika mask terlalu kecil
+    if np.sum(mask > 0) < (area_total * 0.02):
+        margin_h, margin_w = int(h * 0.1), int(w * 0.1)
+        mask[margin_h:h-margin_h, margin_w:w-margin_w] = 255
+
+    return mask
+
+
 def preprocessing_gambar(gambar_bgr):
     """
     Pipeline preprocessing lengkap untuk satu gambar.
-    Melakukan: resize → noise removal → konversi RGB → konversi HSV → normalisasi.
+    Melakukan: resize → noise removal → konversi RGB → konversi HSV → pembuatan mask → normalisasi.
 
     Parameter:
         gambar_bgr (np.ndarray): Gambar input format BGR dari OpenCV.
 
     Return:
-        dict: Dictionary berisi gambar hasil preprocessing:
-            - 'rgb_norm': Gambar RGB yang sudah dinormalisasi (float32, 0-1)
-            - 'hsv_norm': Gambar HSV yang sudah dinormalisasi (float32, 0-1)
-            - 'gray_norm': Gambar grayscale yang sudah dinormalisasi (float32, 0-1)
-            - 'rgb': Gambar RGB asli (uint8, 0-255) setelah resize+blur
-            - 'hsv': Gambar HSV asli (uint8, 0-255) setelah resize
-            - 'gray': Gambar grayscale (uint8, 0-255) setelah resize
+        dict: Dictionary berisi gambar hasil preprocessing & mask objek.
     """
     try:
         # Tahap 1: Resize gambar ke ukuran standar
@@ -130,7 +205,10 @@ def preprocessing_gambar(gambar_bgr):
         gambar_hsv = konversi_ke_hsv(gambar_resized)
         gambar_gray = konversi_ke_grayscale(gambar_blur)
 
-        # Tahap 4: Normalisasi piksel ke rentang [0, 1]
+        # Tahap 4: Buat mask objek biji kopi (Background removal)
+        mask_objek = buat_mask_objek(gambar_resized)
+
+        # Tahap 5: Normalisasi piksel ke rentang [0, 1]
         rgb_norm = normalisasi_piksel(gambar_rgb)
         hsv_norm = normalisasi_piksel(gambar_hsv)
         gray_norm = normalisasi_piksel(gambar_gray)
@@ -142,6 +220,7 @@ def preprocessing_gambar(gambar_bgr):
             'rgb': gambar_rgb,
             'hsv': gambar_hsv,
             'gray': gambar_gray,
+            'mask': mask_objek,
         }
 
     except Exception as e:

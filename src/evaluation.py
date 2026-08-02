@@ -42,25 +42,25 @@ def evaluasi_kmeans(X_fitur, label_cluster, inertia=None):
         dict: Hasil evaluasi clustering.
     """
     print("=" * 50)
-    print("  EVALUASI K-MEANS CLUSTERING")
+    print("  K-MEANS CLUSTERING EVALUATION")
     print("=" * 50)
 
-    # Hitung Silhouette Score
+    # Calculate Silhouette Score
     sil_score = silhouette_score(X_fitur, label_cluster)
     print(f"  Silhouette Score : {sil_score:.4f}")
 
-    # Distribusi data per wilayah
+    # Data distribution per area
     unique_labels, counts = np.unique(label_cluster, return_counts=True)
-    print(f"  Jumlah wilayah distribusi : {len(unique_labels)}")
-    print(f"  Distribusi data           :")
+    print(f"  Number of distribution areas : {len(unique_labels)}")
+    print(f"  Data distribution            :")
     for label, count in zip(unique_labels, counts):
         persentase = (count / len(label_cluster)) * 100
         nama = config.get_cluster_name(label)
-        print(f"    {nama:<18}: {count} data ({persentase:.1f}%)")
+        print(f"    {nama:<18}: {count} samples ({persentase:.1f}%)")
 
-    # Inertia (jika tersedia)
+    # Inertia (if available)
     if inertia is not None:
-        print(f"  Inertia          : {inertia:.2f}")
+        print(f"  Inertia                      : {inertia:.2f}")
 
     hasil = {
         'silhouette_score': sil_score,
@@ -76,11 +76,11 @@ def evaluasi_kmeans(X_fitur, label_cluster, inertia=None):
 
 def simpan_laporan_clustering(hasil_evaluasi, path_output=None):
     """
-    Menyimpan laporan evaluasi clustering ke file .txt.
+    Saves clustering evaluation report to a .txt file.
 
-    Parameter:
-        hasil_evaluasi (dict): Hasil dari fungsi evaluasi_kmeans().
-        path_output (str): Path file output (default dari config).
+    Parameters:
+        hasil_evaluasi (dict): Result from evaluasi_kmeans().
+        path_output (str): Output file path (default from config).
     """
     if path_output is None:
         path_output = config.CLUSTERING_REPORT_PATH
@@ -88,83 +88,73 @@ def simpan_laporan_clustering(hasil_evaluasi, path_output=None):
     try:
         with open(path_output, 'w', encoding='utf-8') as f:
             f.write("=" * 60 + "\n")
-            f.write("  LAPORAN EVALUASI K-MEANS CLUSTERING\n")
-            f.write("  Pengelompokan Wilayah Distribusi Biji Kopi\n")
+            f.write("  K-MEANS CLUSTERING EVALUATION REPORT\n")
+            f.write("  Coffee Bean Distribution Area Grouping\n")
             f.write("=" * 60 + "\n\n")
 
-            f.write(f"Total Data          : {hasil_evaluasi['total_data']}\n")
-            f.write(f"Jumlah Wilayah Distribusi : {hasil_evaluasi['jumlah_cluster']}\n")
-            f.write(f"Silhouette Score          : {hasil_evaluasi['silhouette_score']:.4f}\n")
+            f.write(f"Total Samples               : {hasil_evaluasi['total_data']}\n")
+            f.write(f"Number of Distribution Areas: {hasil_evaluasi['jumlah_cluster']}\n")
+            f.write(f"Silhouette Score            : {hasil_evaluasi['silhouette_score']:.4f}\n")
 
             if hasil_evaluasi['inertia'] is not None:
-                f.write(f"Inertia                   : {hasil_evaluasi['inertia']:.2f}\n")
+                f.write(f"Inertia                     : {hasil_evaluasi['inertia']:.2f}\n")
 
-            f.write(f"\nDistribusi Data per Wilayah:\n")
+            f.write(f"\nData Distribution per Area:\n")
             f.write("-" * 40 + "\n")
             for cluster, jumlah in hasil_evaluasi['distribusi'].items():
                 pct = (jumlah / hasil_evaluasi['total_data']) * 100
                 nama = config.get_cluster_name(cluster)
-                f.write(f"  {nama:<18} : {jumlah} data ({pct:.1f}%)\n")
+                f.write(f"  {nama:<18} : {jumlah} samples ({pct:.1f}%)\n")
 
             f.write("\n" + "=" * 60 + "\n")
-            f.write("  Catatan:\n")
-            f.write("  - Silhouette Score mendekati 1 = clustering sangat baik\n")
-            f.write("  - Silhouette Score mendekati 0 = cluster overlapping\n")
-            f.write("  - Silhouette Score negatif = data mungkin salah cluster\n")
+            f.write("  Metric Notes:\n")
+            f.write("  - Silhouette Score close to 1 = excellent clustering separation\n")
+            f.write("  - Silhouette Score close to 0 = overlapping clusters\n")
+            f.write("  - Negative Silhouette Score   = potential incorrect cluster assignment\n")
             f.write("=" * 60 + "\n")
 
-        print(f"[OK] Laporan clustering disimpan ke: {path_output}")
+        print(f"[OK] Clustering report saved to: {path_output}")
 
     except Exception as e:
-        print(f"[ERROR] Gagal menyimpan laporan clustering: {e}")
+        print(f"[ERROR] Failed to save clustering report: {e}")
 
 
 # ============================================================
-# EVALUASI NAIVE BAYES CLASSIFICATION
+# NAIVE BAYES CLASSIFICATION EVALUATION
 # ============================================================
 
 def evaluasi_naive_bayes(y_test, y_pred, label_names=None):
     """
-    Mengevaluasi hasil klasifikasi Naive Bayes secara detail.
-
-    Parameter:
-        y_test (np.ndarray): Label sebenarnya (ground truth).
-        y_pred (np.ndarray): Label prediksi model.
-        label_names (list): Nama kelas untuk tampilan (opsional).
-
-    Return:
-        dict: Hasil evaluasi klasifikasi.
+    Evaluates classification model results in detail.
     """
     print("=" * 50)
-    print("  EVALUASI NAIVE BAYES CLASSIFICATION")
+    print("  CLASSIFICATION MODEL EVALUATION")
     print("=" * 50)
 
-    # Hitung semua metrik
+    # Calculate all metrics
     akurasi = accuracy_score(y_test, y_pred)
     presisi = precision_score(y_test, y_pred, average='weighted', zero_division=0)
     recall_val = recall_score(y_test, y_pred, average='weighted', zero_division=0)
     f1_val = f1_score(y_test, y_pred, average='weighted', zero_division=0)
     cm = confusion_matrix(y_test, y_pred)
 
-    print(f"  Akurasi   : {akurasi:.4f} ({akurasi*100:.2f}%)")
-    print(f"  Presisi   : {presisi:.4f}")
+    print(f"  Accuracy  : {akurasi:.4f} ({akurasi*100:.2f}%)")
+    print(f"  Precision : {presisi:.4f}")
     print(f"  Recall    : {recall_val:.4f}")
     print(f"  F1-Score  : {f1_val:.4f}")
     print(f"\n  Confusion Matrix:")
     print(f"  {cm}")
 
-    # Tampilkan classification report
+    # Display classification report
     print(f"\n  Classification Report:")
-    # Gunakan hanya label yang ada di y_test atau y_pred untuk menghindari mismatch
     labels_present = sorted(set(y_test.tolist() + y_pred.tolist()))
     if label_names and len(label_names) == len(labels_present):
         report_str = classification_report(y_test, y_pred, target_names=label_names, zero_division=0)
     else:
-        # Fallback: gunakan label numerik
         report_str = classification_report(y_test, y_pred, labels=labels_present, zero_division=0)
     print(report_str)
 
-    # Hitung metrik per kelas untuk visualisasi chart
+    # Per-class metrics
     p, r, f1, sup = precision_recall_fscore_support(
         y_test, y_pred, average=None, zero_division=0
     )
@@ -196,11 +186,7 @@ def evaluasi_naive_bayes(y_test, y_pred, label_names=None):
 
 def simpan_laporan_klasifikasi(hasil_evaluasi, path_output=None):
     """
-    Menyimpan laporan evaluasi klasifikasi Naive Bayes ke file .txt.
-
-    Parameter:
-        hasil_evaluasi (dict): Hasil dari fungsi evaluasi_naive_bayes().
-        path_output (str): Path file output (default dari config).
+    Saves classification evaluation report to a .txt file.
     """
     if path_output is None:
         path_output = config.CLASSIFICATION_REPORT_PATH
@@ -208,12 +194,11 @@ def simpan_laporan_klasifikasi(hasil_evaluasi, path_output=None):
     try:
         with open(path_output, 'w', encoding='utf-8') as f:
             f.write("=" * 60 + "\n")
-            f.write("  LAPORAN EVALUASI NAIVE BAYES CLASSIFICATION\n")
-            f.write("  Klasifikasi Wilayah Distribusi Biji Kopi\n")
+            f.write("  CLASSIFICATION MODEL EVALUATION REPORT\n")
             f.write("=" * 60 + "\n\n")
 
-            f.write(f"Akurasi     : {hasil_evaluasi['akurasi']:.4f} ({hasil_evaluasi['akurasi']*100:.2f}%)\n")
-            f.write(f"Presisi     : {hasil_evaluasi['presisi']:.4f}\n")
+            f.write(f"Accuracy    : {hasil_evaluasi['akurasi']:.4f} ({hasil_evaluasi['akurasi']*100:.2f}%)\n")
+            f.write(f"Precision   : {hasil_evaluasi['presisi']:.4f}\n")
             f.write(f"Recall      : {hasil_evaluasi['recall']:.4f}\n")
             f.write(f"F1-Score    : {hasil_evaluasi['f1_score']:.4f}\n")
 
@@ -224,17 +209,17 @@ def simpan_laporan_klasifikasi(hasil_evaluasi, path_output=None):
             f.write(hasil_evaluasi['classification_report'] + "\n")
 
             f.write("\n" + "=" * 60 + "\n")
-            f.write("  Interpretasi Metrik:\n")
-            f.write("  - Akurasi : Seberapa sering model benar secara keseluruhan\n")
-            f.write("  - Presisi : Dari prediksi positif, berapa yang benar\n")
-            f.write("  - Recall  : Dari data positif sebenarnya, berapa yang tertangkap\n")
-            f.write("  - F1      : Harmonic mean dari Presisi dan Recall\n")
+            f.write("  Metric Interpretation:\n")
+            f.write("  - Accuracy  : Overall proportion of correct predictions\n")
+            f.write("  - Precision : Proportion of correct positive predictions\n")
+            f.write("  - Recall    : Proportion of actual positive instances correctly identified\n")
+            f.write("  - F1-Score  : Harmonic mean of Precision and Recall\n")
             f.write("=" * 60 + "\n")
 
-        print(f"[OK] Laporan klasifikasi disimpan ke: {path_output}")
+        print(f"[OK] Classification report saved to: {path_output}")
 
     except Exception as e:
-        print(f"[ERROR] Gagal menyimpan laporan klasifikasi: {e}")
+        print(f"[ERROR] Failed to save classification report: {e}")
 
 
 # ============================================================
